@@ -1,0 +1,94 @@
+---
+title: "Authentication"
+description: "Configure API credentials for Anthropic, OpenAI-compatible providers, or xAI/Grok — via environment variables or the claw login command."
+---
+
+Claw Code reads credentials from environment variables at startup. Set the variables for your chosen provider before running `claw`. You can also use `claw login` to start an interactive OAuth flow.
+
+## Providers
+
+<Tabs>
+  <Tab title="Anthropic">
+    Set your Anthropic API key and, optionally, a custom base URL:
+
+    ```bash
+    export ANTHROPIC_API_KEY="sk-ant-..."
+    export ANTHROPIC_BASE_URL="https://api.anthropic.com"
+    ```
+
+    `ANTHROPIC_BASE_URL` defaults to `https://api.anthropic.com` and can be omitted unless you are routing through a proxy or a custom endpoint.
+
+    The default model is `claude-opus-4-6`. Override it with the `--model` flag:
+
+    ```bash
+    claw --model claude-haiku-4-5-20251213
+    ```
+  </Tab>
+  <Tab title="OpenAI-compatible">
+    Any provider that exposes an OpenAI-compatible API is supported. Set the key and base URL for your endpoint:
+
+    ```bash
+    export OPENAI_API_KEY="..."
+    export OPENAI_BASE_URL="https://api.openai.com/v1"
+    ```
+
+    Replace `OPENAI_BASE_URL` with the base URL of your chosen provider. This works with OpenAI, Azure OpenAI, and any third-party compatible service.
+  </Tab>
+  <Tab title="Grok / xAI">
+    To use xAI's Grok models, set the xAI key and base URL:
+
+    ```bash
+    export XAI_API_KEY="..."
+    export XAI_BASE_URL="https://api.x.ai"
+    ```
+  </Tab>
+</Tabs>
+
+## OAuth login
+
+In addition to environment variables, you can authenticate through an interactive OAuth flow:
+
+```bash
+claw login
+```
+
+This opens a browser-based authorization flow. Credentials are saved locally and reused across sessions.
+
+To remove saved OAuth credentials:
+
+```bash
+claw logout
+```
+
+The OAuth configuration (client ID, authorize URL, token URL, callback port, and scopes) is read from your settings file. See [Configuration](/configuration/overview) for details on the `oauth` settings key.
+
+## Local models
+
+If you run a local inference server that exposes an OpenAI-compatible API (for example, Ollama or llama.cpp), point the OpenAI variables at it:
+
+```bash
+export OPENAI_API_KEY="local"
+export OPENAI_BASE_URL="http://localhost:11434/v1"
+```
+
+<Info>
+  The API key value is required by the environment variable but may be arbitrary (such as `"local"`) if your local server does not enforce authentication.
+</Info>
+
+## Permission modes
+
+Claw Code supports three permission modes that control what actions the agent is allowed to take without prompting you:
+
+| Mode | Flag value | Description |
+|------|-----------|-------------|
+| Read-only | `read-only` | The agent can only read files and run safe queries. |
+| Workspace write | `workspace-write` | The agent can read and write files within the workspace. |
+| Danger full access | `danger-full-access` | Full access — the default. The agent can read, write, and execute without restrictions. |
+
+Set the mode at runtime with the `--permission-mode` flag:
+
+```bash
+claw --permission-mode read-only
+```
+
+Or set it persistently in your settings file using the `permissionMode` key. See [Permissions](/configuration/permissions) for details.

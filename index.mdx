@@ -1,97 +1,92 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Claw Code"
+description: "A high-performance, open-source AI coding agent written in Rust. Bring LLM-powered agentic workflows directly into your terminal."
 ---
 
-## Setting up
+Claw Code is a terminal-native CLI agent that brings advanced LLM capabilities into your development workflow. Built in Rust for speed, memory safety, and minimal binary size — it supports Anthropic, OpenAI-compatible providers, and xAI/Grok out of the box.
 
-Get your documentation site up and running in minutes.
-
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Install Claw Code and run your first AI-powered prompt in minutes
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Authentication" icon="key" href="/authentication">
+    Configure your API credentials for Anthropic, OpenAI, or xAI providers
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="Slash Commands" icon="terminal" href="/commands/slash-commands">
+    Explore the full set of interactive slash commands available in the REPL
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="Built-in Tools" icon="wrench" href="/commands/tools">
+    Learn about the built-in tool suite: bash, file ops, web search, and more
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## What is Claw Code?
 
-Everything you need to create world-class documentation.
+Claw Code (`claw`) is an open-source, independent implementation of a terminal-based AI coding agent. It provides:
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+- **Interactive REPL** — A persistent shell session with slash command support, tab completion, and live streaming output
+- **One-shot mode** — Run a single prompt non-interactively and exit, perfect for scripts and CI pipelines
+- **Rich tool suite** — Execute bash commands, read/write/edit files, search codebases, fetch web pages, and more
+- **Session persistence** — Save and resume conversations as JSON files
+- **Multi-provider support** — Works with Anthropic's Claude, any OpenAI-compatible endpoint, and xAI/Grok
 
-## Need inspiration?
+<Note>
+  Claw Code is an independent open-source project, not the official Anthropic Claude Code product. It is not affiliated with or endorsed by Anthropic.
+</Note>
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+## Get up and running
+
+<Steps>
+  <Step title="Install Rust and build">
+    Install the stable Rust toolchain, then build and install the `claw` binary from source.
+
+    ```bash
+    cd rust
+    cargo install --path crates/claw-cli --locked
+    ```
+  </Step>
+  <Step title="Set your API key">
+    Export your provider credentials. Anthropic is the default:
+
+    ```bash
+    export ANTHROPIC_API_KEY="sk-ant-..."
+    ```
+  </Step>
+  <Step title="Start the interactive shell">
+    Run `claw` to open the interactive REPL and start coding with AI assistance:
+
+    ```bash
+    claw
+    ```
+  </Step>
+  <Step title="Run your first prompt">
+    Type a prompt or use `/help` to explore available commands:
+
+    ```bash
+    claw prompt "summarize this workspace"
+    ```
+  </Step>
+</Steps>
+
+## Key features
+
+<CardGroup cols={2}>
+  <Card title="Interactive shell" icon="square-terminal" href="/usage/interactive-shell">
+    Full REPL with streaming output, slash commands, and tab completion
+  </Card>
+  <Card title="Session management" icon="floppy-disk" href="/usage/session-management">
+    Save, resume, and export conversations as portable JSON files
+  </Card>
+  <Card title="MCP integration" icon="plug" href="/configuration/mcp-servers">
+    Connect external tools via the Model Context Protocol
+  </Card>
+  <Card title="Plugin system" icon="puzzle-piece" href="/configuration/plugins">
+    Extend Claw with custom tools through the plugin architecture
+  </Card>
+  <Card title="Skills" icon="book" href="/advanced/skills">
+    Load reusable instruction sets from local SKILL.md files
+  </Card>
+  <Card title="Agent spawning" icon="robot" href="/advanced/agents">
+    Delegate parallel sub-tasks to specialized AI agents
+  </Card>
+</CardGroup>

@@ -1,0 +1,96 @@
+---
+title: "Hooks"
+description: "Configure shell commands that run before or after every tool call. Use hooks to log tool activity, enforce policies, or trigger side effects."
+---
+
+Hooks are shell command strings that Claw runs at defined points in the tool-use lifecycle. They let you attach custom logic to every tool invocation without modifying the agent itself.
+
+## Hook types
+
+Two hook types are supported, matching the tool-use lifecycle:
+
+| Type | Config key | When it fires |
+|---|---|---|
+| Pre-tool-use | `PreToolUse` | Before Claw executes a tool call |
+| Post-tool-use | `PostToolUse` | After a tool call completes |
+
+## Configuring hooks
+
+Add a `hooks` object to any settings file. Each key is a hook type; the value is an array of shell command strings.
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      "echo 'tool call starting'"
+    ],
+    "PostToolUse": [
+      "echo 'tool call finished'"
+    ]
+  }
+}
+```
+
+Multiple commands are listed in order. Commands from lower-priority scopes are combined with commands from higher-priority scopes — duplicate entries are dropped.
+
+### Example: audit logging
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      "./scripts/audit-log.sh pre"
+    ],
+    "PostToolUse": [
+      "./scripts/audit-log.sh post"
+    ]
+  }
+}
+```
+
+### Example: combining user and project hooks
+
+If your user config defines a `PreToolUse` hook and your project config defines another, both commands run. The user-level command runs first, followed by the project-level one (load order matches config precedence).
+
+**User config (`~/.claw/settings.json`)**
+
+```json
+{
+  "hooks": {
+    "PreToolUse": ["echo global-pre"]
+  }
+}
+```
+
+**Project config (`.claw/settings.json`)**
+
+```json
+{
+  "hooks": {
+    "PostToolUse": ["echo project-post"]
+  }
+}
+```
+
+Both hooks are active in the merged config.
+
+## Inspecting active hooks
+
+Run `/config hooks` in the REPL to see the resolved hook commands across all loaded config files:
+
+```
+/config hooks
+```
+
+The output lists each hook type and the command strings that would fire.
+
+<Warning>
+  Hook execution is **config-only** in the current Rust implementation. The
+  `PreToolUse` and `PostToolUse` commands are parsed and stored, but the runtime
+  does not yet invoke them automatically around tool calls. Configuring hooks
+  is a forward-compatible action — they will fire once execution support ships.
+</Warning>
+
+## Plugin hooks
+
+Plugins can also declare their own `PreToolUse` and `PostToolUse` hooks in their `plugin.json` manifest. These are aggregated with your settings-file hooks when the plugin is enabled. See [Plugins](/configuration/plugins) for details.

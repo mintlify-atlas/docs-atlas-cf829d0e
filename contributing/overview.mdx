@@ -1,0 +1,105 @@
+---
+title: "Contributing"
+description: "How to contribute to Claw Code"
+---
+
+Contributions to Claw Code are welcome. This guide covers everything you need to set up a local development environment, follow the code style, and open a pull request that is ready to review.
+
+## Development setup
+
+<Steps>
+  <Step title="Fork and clone the repository">
+    Fork the repository on GitHub, then clone your fork locally:
+
+    ```bash
+    git clone https://github.com/your-username/claudecode.git
+    cd claudecode
+    ```
+  </Step>
+
+  <Step title="Install the stable Rust toolchain">
+    Claw Code requires the stable Rust toolchain. Install it with `rustup`:
+
+    ```bash
+    rustup install stable
+    ```
+
+    Verify the installation:
+
+    ```bash
+    rustc --version
+    cargo --version
+    ```
+  </Step>
+
+  <Step title="Build the project">
+    The Rust workspace lives under `rust/`. Run the build from there:
+
+    ```bash
+    cd rust
+    cargo build
+    ```
+
+    For a release-optimized binary:
+
+    ```bash
+    cargo build --release
+    ```
+  </Step>
+
+  <Step title="Run the test suite">
+    Run all workspace tests to confirm your environment is working:
+
+    ```bash
+    cargo test --workspace
+    ```
+  </Step>
+</Steps>
+
+## Verification checklist
+
+Run all four checks before opening a pull request. Every check must pass cleanly.
+
+```bash
+cargo fmt --all --check
+cargo clippy --workspace --all-targets -- -D warnings
+cargo check --workspace
+cargo test --workspace
+```
+
+<Tip>
+  Run `cargo fmt --all` (without `--check`) to apply formatting automatically, then use `--check` to confirm the result is clean.
+</Tip>
+
+If review feedback changes behavior, rerun the relevant verification commands before marking the PR ready again.
+
+## Pull request guidelines
+
+- **Branch from `main`.** Do not base your branch on a feature branch unless you are explicitly building on top of it.
+- **Keep each PR scoped to one change.** Mixing unrelated fixes makes review harder and slows merging.
+- **Explain your PR clearly.** Include the motivation, a summary of the implementation, and the verification commands you ran.
+- **Make local checks pass before requesting review.** A PR with failing checks will not be merged.
+
+<Note>
+  If you change behavior, add or update the relevant tests in the same pull request.
+</Note>
+
+## Code style
+
+- Follow the existing patterns in the crate you are modifying. Do not introduce a new style across the board.
+- Format all code with `rustfmt` (`cargo fmt --all`).
+- Keep `clippy` clean for every workspace target you touched.
+- Prefer focused, minimal diffs. Drive-by refactors unrelated to your change belong in a separate PR.
+
+## Where to contribute
+
+Browse open issues and pull requests on GitHub:
+
+<CardGroup cols={2}>
+  <Card title="Open issues" icon="circle-dot" href="https://github.com/soongenwong/claudecode/issues">
+    Find bugs to fix, features to build, or documentation gaps to fill.
+  </Card>
+  <Card title="Pull requests" icon="code-pull-request" href="https://github.com/soongenwong/claudecode/pulls">
+    Review open pull requests or check the status of your own contributions.
+  </Card>
+</CardGroup>

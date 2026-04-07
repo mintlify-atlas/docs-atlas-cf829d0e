@@ -1,0 +1,558 @@
+---
+title: "Built-in tools"
+description: "Reference for all tools available to the AI agent during conversations."
+---
+
+The AI agent uses tools to interact with your system. Each tool requires a minimum permission level — Claw Code will not invoke a tool unless the current permission mode allows it.
+
+<Tip>
+  Use `--allowedTools` when launching Claw to restrict which tools the agent can invoke in a session. Aliases `read`, `write`, `edit`, `glob`, and `grep` are accepted as shorthand.
+</Tip>
+
+```bash
+claw --allowedTools read_file,glob_search,grep_search
+# or using shorthand aliases
+claw --allowedTools read,glob,grep
+```
+
+---
+
+## Permission levels
+
+<CardGroup cols={3}>
+  <Card title="Read-only" icon="eye">
+    Agent can read files and fetch external content, but cannot modify anything.
+  </Card>
+  <Card title="Workspace write" icon="pencil">
+    Agent can read and write files within the workspace directory.
+  </Card>
+  <Card title="Full access" icon="bolt">
+    Agent can execute shell commands and launch sub-agents. Use with caution.
+  </Card>
+</CardGroup>
+
+Switch permission mode at any time using `/permissions` in the REPL.
+
+---
+
+## Read-only tools
+
+These tools are available in all permission modes.
+
+---
+
+### `read_file`
+
+Alias: `read`
+
+Read a text file from the workspace.
+
+<ParamField path="body.path" type="string" required>
+  Path to the file to read.
+</ParamField>
+
+<ParamField path="body.offset" type="number">
+  Line number to start reading from (0-indexed).
+</ParamField>
+
+<ParamField path="body.limit" type="number">
+  Maximum number of lines to return.
+</ParamField>
+
+```json
+{
+  "path": "src/main.rs",
+  "offset": 0,
+  "limit": 100
+}
+```
+
+---
+
+### `glob_search`
+
+Alias: `glob`
+
+Find files by glob pattern.
+
+<ParamField path="body.pattern" type="string" required>
+  Glob pattern to match (e.g. `**/*.rs`, `src/**/*.ts`).
+</ParamField>
+
+<ParamField path="body.path" type="string">
+  Root directory to search within. Defaults to the workspace root.
+</ParamField>
+
+```json
+{
+  "pattern": "**/*.rs",
+  "path": "src"
+}
+```
+
+---
+
+### `grep_search`
+
+Alias: `grep`
+
+Search file contents with a regex pattern.
+
+<ParamField path="body.pattern" type="string" required>
+  Regex pattern to search for.
+</ParamField>
+
+<ParamField path="body.path" type="string">
+  Directory to search within.
+</ParamField>
+
+<ParamField path="body.glob" type="string">
+  Glob filter to limit which files are searched (e.g. `*.rs`).
+</ParamField>
+
+<ParamField path="body.output_mode" type="string">
+  Controls output verbosity.
+</ParamField>
+
+<ParamField path="body.-i" type="boolean">
+  Case-insensitive matching.
+</ParamField>
+
+<ParamField path="body.-n" type="boolean">
+  Include line numbers in output.
+</ParamField>
+
+<ParamField path="body.context" type="number">
+  Lines of context to show around each match.
+</ParamField>
+
+<ParamField path="body.head_limit" type="number">
+  Maximum number of results to return.
+</ParamField>
+
+```json
+{
+  "pattern": "fn handle_commit",
+  "glob": "*.rs",
+  "-n": true,
+  "context": 3
+}
+```
+
+---
+
+### `WebFetch`
+
+Fetch a URL, convert it into readable text, and answer a prompt about it.
+
+<ParamField path="body.url" type="string" required>
+  URL to fetch. HTTP URLs are automatically upgraded to HTTPS.
+</ParamField>
+
+<ParamField path="body.prompt" type="string" required>
+  Question or instruction to answer using the fetched content.
+</ParamField>
+
+```json
+{
+  "url": "https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html",
+  "prompt": "Summarize the ownership rules."
+}
+```
+
+---
+
+### `WebSearch`
+
+Search the web for current information and return cited results.
+
+<ParamField path="body.query" type="string" required>
+  Search query (minimum 2 characters).
+</ParamField>
+
+<ParamField path="body.allowed_domains" type="string[]">
+  Restrict results to these domains only.
+</ParamField>
+
+<ParamField path="body.blocked_domains" type="string[]">
+  Exclude results from these domains.
+</ParamField>
+
+```json
+{
+  "query": "rust async runtime comparison 2025",
+  "allowed_domains": ["doc.rust-lang.org", "blog.rust-lang.org"]
+}
+```
+
+---
+
+### `Skill`
+
+Load a local skill definition and its instructions.
+
+<ParamField path="body.skill" type="string" required>
+  Name of the skill to load. Matched against skill directories in `~/.claw/skills/` and project `.claw/skills/`.
+</ParamField>
+
+<ParamField path="body.args" type="string">
+  Optional arguments passed to the skill.
+</ParamField>
+
+```json
+{
+  "skill": "doc-author",
+  "args": "write a quickstart guide"
+}
+```
+
+---
+
+### `ToolSearch`
+
+Search for deferred or specialized tools by exact name or keywords.
+
+<ParamField path="body.query" type="string" required>
+  Tool name or keywords to search for.
+</ParamField>
+
+<ParamField path="body.max_results" type="number">
+  Maximum number of results to return.
+</ParamField>
+
+```json
+{
+  "query": "notebook",
+  "max_results": 5
+}
+```
+
+---
+
+### `Sleep`
+
+Wait for a specified duration without holding a shell process.
+
+<ParamField path="body.duration_ms" type="number" required>
+  Duration to sleep in milliseconds.
+</ParamField>
+
+```json
+{
+  "duration_ms": 2000
+}
+```
+
+---
+
+### `SendUserMessage`
+
+Send a message to the user. Use `proactive` status for unsolicited updates during long-running tasks.
+
+<ParamField path="body.message" type="string" required>
+  Message text to display.
+</ParamField>
+
+<ParamField path="body.status" type="string" required>
+  Message urgency: `normal` or `proactive`.
+</ParamField>
+
+<ParamField path="body.attachments" type="string[]">
+  File paths to attach to the message.
+</ParamField>
+
+```json
+{
+  "message": "Finished analysing 42 files. Found 3 issues.",
+  "status": "proactive"
+}
+```
+
+---
+
+### `StructuredOutput`
+
+Return structured output in the requested format. Accepts any key/value pairs.
+
+```json
+{
+  "summary": "Refactored auth module",
+  "files_changed": 4,
+  "breaking_changes": false
+}
+```
+
+---
+
+## Workspace write tools
+
+These tools require `workspace-write` or `danger-full-access` permission mode.
+
+---
+
+### `write_file`
+
+Alias: `write`
+
+Write a text file in the workspace.
+
+<ParamField path="body.path" type="string" required>
+  Path to write (relative to workspace root).
+</ParamField>
+
+<ParamField path="body.content" type="string" required>
+  Full file content to write.
+</ParamField>
+
+```json
+{
+  "path": "src/config.rs",
+  "content": "pub struct Config {\n    pub model: String,\n}\n"
+}
+```
+
+---
+
+### `edit_file`
+
+Alias: `edit`
+
+Replace text in a workspace file. Performs an exact string match.
+
+<ParamField path="body.path" type="string" required>
+  Path to the file to edit.
+</ParamField>
+
+<ParamField path="body.old_string" type="string" required>
+  Exact text to find and replace. Must match exactly, including whitespace.
+</ParamField>
+
+<ParamField path="body.new_string" type="string" required>
+  Replacement text.
+</ParamField>
+
+<ParamField path="body.replace_all" type="boolean">
+  Replace every occurrence of `old_string`. Defaults to `false` (replace first only).
+</ParamField>
+
+```json
+{
+  "path": "src/lib.rs",
+  "old_string": "fn old_name(",
+  "new_string": "fn new_name(",
+  "replace_all": false
+}
+```
+
+---
+
+### `TodoWrite`
+
+Update the structured task list for the current session.
+
+<ParamField path="body.todos" type="object[]" required>
+  Full replacement list of todo items. Each item requires `content`, `activeForm`, and `status`.
+</ParamField>
+
+```json
+{
+  "todos": [
+    { "content": "Read source files", "activeForm": "Read source files", "status": "completed" },
+    { "content": "Write documentation", "activeForm": "Write documentation", "status": "in_progress" },
+    { "content": "Validate links", "activeForm": "Validate links", "status": "pending" }
+  ]
+}
+```
+
+Valid `status` values: `pending`, `in_progress`, `completed`.
+
+---
+
+### `NotebookEdit`
+
+Replace, insert, or delete a cell in a Jupyter notebook.
+
+<ParamField path="body.notebook_path" type="string" required>
+  Path to the `.ipynb` notebook file.
+</ParamField>
+
+<ParamField path="body.cell_id" type="string">
+  ID of the cell to target.
+</ParamField>
+
+<ParamField path="body.new_source" type="string">
+  New cell content (for replace or insert modes).
+</ParamField>
+
+<ParamField path="body.cell_type" type="string">
+  Cell type: `code` or `markdown`.
+</ParamField>
+
+<ParamField path="body.edit_mode" type="string">
+  Operation to perform: `replace`, `insert`, or `delete`.
+</ParamField>
+
+```json
+{
+  "notebook_path": "analysis.ipynb",
+  "cell_id": "cell-3",
+  "new_source": "import pandas as pd\ndf = pd.read_csv('data.csv')",
+  "cell_type": "code",
+  "edit_mode": "replace"
+}
+```
+
+---
+
+### `Config`
+
+Get or set Claw Code settings.
+
+<ParamField path="body.setting" type="string" required>
+  Setting key to read or write.
+</ParamField>
+
+<ParamField path="body.value" type="string | boolean | number">
+  New value to set. Omit to read the current value.
+</ParamField>
+
+```json
+{ "setting": "model" }
+```
+
+```json
+{ "setting": "model", "value": "claude-opus-4-6" }
+```
+
+---
+
+## Full access tools
+
+These tools require `danger-full-access` permission mode.
+
+<Warning>
+  Full access tools can execute arbitrary code and spawn sub-agents. Only grant this permission mode in trusted environments.
+</Warning>
+
+---
+
+### `bash`
+
+Execute a shell command in the current workspace.
+
+<ParamField path="body.command" type="string" required>
+  Shell command to execute.
+</ParamField>
+
+<ParamField path="body.timeout" type="number">
+  Timeout in milliseconds. Defaults to no timeout.
+</ParamField>
+
+<ParamField path="body.description" type="string">
+  Human-readable description of the command (shown in logs).
+</ParamField>
+
+<ParamField path="body.run_in_background" type="boolean">
+  Run the command without waiting for it to finish.
+</ParamField>
+
+<ParamField path="body.dangerouslyDisableSandbox" type="boolean">
+  Disable any sandbox restrictions. Use with extreme caution.
+</ParamField>
+
+```json
+{
+  "command": "cargo test --workspace",
+  "timeout": 120000,
+  "description": "Run all workspace tests"
+}
+```
+
+---
+
+### `Agent`
+
+Launch a specialized agent task and persist its handoff metadata.
+
+<ParamField path="body.description" type="string" required>
+  Short description of the agent's purpose (used as the agent name slug).
+</ParamField>
+
+<ParamField path="body.prompt" type="string" required>
+  Full prompt to send to the sub-agent.
+</ParamField>
+
+<ParamField path="body.subagent_type" type="string">
+  Sub-agent specialization type.
+</ParamField>
+
+<ParamField path="body.name" type="string">
+  Override the agent's display name.
+</ParamField>
+
+<ParamField path="body.model" type="string">
+  Override the model used by the sub-agent. Defaults to `claude-opus-4-6`.
+</ParamField>
+
+```json
+{
+  "description": "Security audit",
+  "prompt": "Review src/ for common Rust security issues such as unsafe blocks, integer overflows, and improper error handling. Report findings as a Markdown list.",
+  "subagent_type": "code-review"
+}
+```
+
+---
+
+### `REPL`
+
+Execute code in a REPL-like subprocess.
+
+<ParamField path="body.code" type="string" required>
+  Code to execute.
+</ParamField>
+
+<ParamField path="body.language" type="string" required>
+  Language of the code (e.g. `python`, `javascript`, `ruby`).
+</ParamField>
+
+<ParamField path="body.timeout_ms" type="number">
+  Execution timeout in milliseconds.
+</ParamField>
+
+```json
+{
+  "code": "import sys\nprint(sys.version)",
+  "language": "python",
+  "timeout_ms": 5000
+}
+```
+
+---
+
+### `PowerShell`
+
+Execute a PowerShell command with optional timeout.
+
+<ParamField path="body.command" type="string" required>
+  PowerShell command or script to execute.
+</ParamField>
+
+<ParamField path="body.timeout" type="number">
+  Timeout in milliseconds.
+</ParamField>
+
+<ParamField path="body.description" type="string">
+  Human-readable description (shown in logs).
+</ParamField>
+
+<ParamField path="body.run_in_background" type="boolean">
+  Run without waiting for the command to finish.
+</ParamField>
+
+```json
+{
+  "command": "Get-ChildItem -Recurse -Filter *.rs | Measure-Object | Select-Object Count",
+  "description": "Count Rust source files"
+}
+```

@@ -1,0 +1,180 @@
+---
+title: "MCP servers"
+description: "Connect external tools to Claw Code via the Model Context Protocol. Configure stdio, SSE, HTTP, WebSocket, and managed-proxy servers."
+---
+
+The Model Context Protocol (MCP) is an open standard for connecting AI agents to external tool servers. When you add an MCP server to your config, Claw registers its tools automatically and makes them available during every session.
+
+## Supported transports
+
+Claw supports six MCP transport types:
+
+| Type | Config key | Use case |
+|---|---|---|
+| `stdio` | `"type": "stdio"` | Local process, launched by Claw (default) |
+| `sse` | `"type": "sse"` | Remote server over Server-Sent Events |
+| `http` | `"type": "http"` | Remote server over HTTP streaming |
+| `ws` | `"type": "ws"` | Remote server over WebSocket |
+| `sdk` | `"type": "sdk"` | Named SDK-embedded server |
+| `claudeai-proxy` | `"type": "claudeai-proxy"` | Managed proxy server |
+
+The `type` field is optional for stdio servers — if omitted, `stdio` is assumed.
+
+## Adding MCP servers
+
+MCP servers are configured in the `mcpServers` object of any settings file. The key is an arbitrary name you choose; the value is the server config.
+
+### Stdio server
+
+Claw launches the process and communicates over stdin/stdout. Provide `command`, optional `args`, and optional `env`.
+
+```json
+{
+  "mcpServers": {
+    "my-tool": {
+      "command": "uvx",
+      "args": ["mcp-server-my-tool"],
+      "env": {
+        "MY_TOOL_API_KEY": "sk-..."
+      }
+    }
+  }
+}
+```
+
+<Warning>
+  Avoid committing secrets in `env`. Put them in
+  `.claw/settings.local.json` instead and add that file to `.gitignore`.
+</Warning>
+
+### SSE server
+
+```json
+{
+  "mcpServers": {
+    "remote-sse": {
+      "type": "sse",
+      "url": "https://mcp.example.com/sse",
+      "headers": {
+        "Authorization": "Bearer <token>"
+      }
+    }
+  }
+}
+```
+
+### HTTP server
+
+```json
+{
+  "mcpServers": {
+    "remote-http": {
+      "type": "http",
+      "url": "https://mcp.example.com/mcp",
+      "headers": {
+        "Authorization": "Bearer <token>"
+      }
+    }
+  }
+}
+```
+
+### WebSocket server
+
+```json
+{
+  "mcpServers": {
+    "ws-tool": {
+      "type": "ws",
+      "url": "wss://mcp.example.com/ws",
+      "headers": {
+        "X-Api-Key": "<token>"
+      }
+    }
+  }
+}
+```
+
+### SSE and HTTP with OAuth
+
+Remote servers that require OAuth can include an `oauth` block:
+
+```json
+{
+  "mcpServers": {
+    "oauth-server": {
+      "type": "http",
+      "url": "https://mcp.example.com/mcp",
+      "oauth": {
+        "clientId": "my-mcp-client",
+        "callbackPort": 7777,
+        "authServerMetadataUrl": "https://auth.example.com/.well-known/oauth-authorization-server"
+      }
+    }
+  }
+}
+```
+
+## Config scope and precedence
+
+MCP servers can be defined at any config scope. If the same server name appears in multiple files, the highest-priority scope wins and replaces the entry entirely (no deep-merge for individual servers).
+
+<Tabs>
+  <Tab title="User-level (~/.claw/settings.json)">
+    Available in every project. Good for general-purpose tool servers you always want loaded.
+
+    ```json
+    {
+      "mcpServers": {
+        "filesystem": {
+          "command": "npx",
+          "args": ["-y", "@modelcontextprotocol/server-filesystem", "/"]
+        }
+      }
+    }
+    ```
+  </Tab>
+
+  <Tab title="Project-level (.claw/settings.json)">
+    Committed with the repository. Good for project-specific servers shared with your team.
+
+    ```json
+    {
+      "mcpServers": {
+        "project-db": {
+          "command": "uvx",
+          "args": ["mcp-server-sqlite", "--db", "./dev.db"]
+        }
+      }
+    }
+    ```
+  </Tab>
+
+  <Tab title="Local overrides (.claw/settings.local.json)">
+    Machine-local, never committed. Good for overriding a server URL or injecting a secret token.
+
+    ```json
+    {
+      "mcpServers": {
+        "project-db": {
+          "command": "uvx",
+          "args": ["mcp-server-sqlite", "--db", "./prod.db"],
+          "env": {
+            "DB_PASSWORD": "hunter2"
+          }
+        }
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Inspecting loaded MCP config
+
+Run `/config` in the REPL to see all loaded MCP servers and which config file each one came from:
+
+```
+/config
+```
+
+Each entry in the output shows the server name, transport type, and the scope (`User`, `Project`, or `Local`) where it was defined.

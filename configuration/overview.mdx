@@ -1,0 +1,119 @@
+---
+title: "Configuration overview"
+description: "How Claw Code loads and merges configuration from multiple sources, and how to inspect the active config."
+---
+
+Claw Code assembles its configuration by merging JSON settings files from up to three scopes. Each scope can override the one before it, giving you control at the user, project, and machine levels.
+
+## Config file locations
+
+Claw looks for settings files in the following locations, in load order:
+
+<AccordionGroup>
+  <Accordion title="User config (~/.claw/settings.json)">
+    Applies to every project you open. This is the right place for personal
+    preferences such as your default model, global MCP servers, and OAuth config.
+
+    ```
+    ~/.claw/settings.json
+    ```
+
+    A legacy flat file at `~/.claw.json` is also recognised for backwards
+    compatibility, but `~/.claw/settings.json` is preferred.
+  </Accordion>
+
+  <Accordion title="Project config (.claw/settings.json)">
+    Checked into source control alongside your code. Use it for project-specific
+    MCP servers, hooks, and plugin lists that all contributors should share.
+
+    ```
+    <project-root>/.claw/settings.json
+    ```
+
+    A legacy flat file at `<project-root>/.claw.json` is also recognised.
+  </Accordion>
+
+  <Accordion title="Local overrides (.claw/settings.local.json)">
+    Machine-local settings that are never committed. Add this path to your
+    `.gitignore`. Use it for secrets, personal API tokens, or permission-mode
+    overrides you do not want to share.
+
+    ```
+    <project-root>/.claw/settings.local.json
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Precedence
+
+When the same key appears in more than one file, the more specific scope wins:
+
+```
+Local (.claw/settings.local.json)   ← highest priority
+  └─ Project (.claw/settings.json)
+       └─ User (~/.claw/settings.json)  ← lowest priority
+```
+
+Nested objects are deep-merged; scalar values and arrays are replaced by the higher-priority source.
+
+<Note>
+  MCP server entries are also merged across scopes. A local-scope server with
+  the same name as a user-scope server replaces it entirely.
+</Note>
+
+## Minimal settings.json
+
+The settings file must be a JSON object. All fields are optional.
+
+```json
+{
+  "model": "claude-opus-4-6",
+  "permissionMode": "workspace-write",
+  "mcpServers": {},
+  "hooks": {
+    "PreToolUse": [],
+    "PostToolUse": []
+  },
+  "enabledPlugins": {},
+  "plugins": {
+    "externalDirectories": [],
+    "installRoot": null,
+    "registryPath": null
+  }
+}
+```
+
+## CLAW.md — workspace instruction memory
+
+`CLAW.md` is a Markdown file that Claw reads as workspace-specific guidance. It is separate from `settings.json` and is not parsed as configuration — Claw uses its content as context when reasoning about tasks.
+
+Claw searches ancestor directories up to your home directory for a `CLAW.md` file. The closest one wins. The file typically lives at the project root.
+
+Use `/memory` in the REPL to inspect which instruction memory files are currently loaded.
+
+### Creating a CLAW.md
+
+Run the `/init` slash command inside the REPL to generate a starter `CLAW.md` for the current repository:
+
+```
+/init
+```
+
+Claw writes a `CLAW.md` to the project root with detected stack information and a working agreement section.
+
+## Inspecting the active config
+
+Use the `/config` slash command in the REPL to inspect the merged configuration without editing any files.
+
+| Command | What it shows |
+|---|---|
+| `/config` | Full merged config as JSON, with the source file for each loaded entry |
+| `/config env` | Merged `env` object |
+| `/config hooks` | Resolved hook commands for `PreToolUse` and `PostToolUse` |
+| `/config model` | Active model name |
+| `/config plugins` | Plugin enable/disable map and directory settings |
+
+<Tip>
+  Run `/config` after editing any settings file to confirm the merged result
+  looks correct before starting a task.
+</Tip>

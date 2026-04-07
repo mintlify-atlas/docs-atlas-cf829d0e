@@ -1,0 +1,134 @@
+---
+title: "Permission modes"
+description: "Control what operations Claw Code can perform. Choose between read-only, workspace-write, and danger-full-access modes."
+---
+
+Permission modes let you restrict which tools the agent can call. Use a restrictive mode when you want to review changes manually, or `danger-full-access` when you need the full power of the agent in a trusted environment.
+
+## The three modes
+
+<CardGroup cols={3}>
+  <Card title="read-only" icon="eye">
+    The agent can read files, search the codebase, fetch URLs, and perform
+    lookups. No writes, no shell execution.
+  </Card>
+  <Card title="workspace-write" icon="pen">
+    The agent can read and write files in the workspace. Shell execution is
+    still blocked.
+  </Card>
+  <Card title="danger-full-access" icon="terminal">
+    Full access: bash execution, all file operations, all tools. This is the
+    default when no mode is specified.
+  </Card>
+</CardGroup>
+
+## Setting the permission mode
+
+You can set the mode in three ways. All three are equivalent — the most recently applied one wins.
+
+<Tabs>
+  <Tab title="CLI flag">
+    Pass `--permission-mode` when launching Claw:
+
+    ```bash
+    claw --permission-mode read-only
+    claw --permission-mode workspace-write
+    claw --permission-mode danger-full-access
+    ```
+  </Tab>
+
+  <Tab title="REPL command">
+    Switch modes at any point during a session without restarting:
+
+    ```
+    /permissions read-only
+    /permissions workspace-write
+    /permissions danger-full-access
+    ```
+
+    Run `/permissions` with no argument to see the current mode.
+  </Tab>
+
+  <Tab title="settings.json">
+    Set a default mode that applies to every session in that config scope:
+
+    ```json
+    {
+      "permissionMode": "workspace-write"
+    }
+    ```
+
+    The legacy `permissions.defaultMode` key is also accepted:
+
+    ```json
+    {
+      "permissions": {
+        "defaultMode": "workspace-write"
+      }
+    }
+    ```
+
+    Supported aliases: `"plan"` and `"default"` map to `read-only`;
+    `"acceptEdits"` and `"auto"` map to `workspace-write`;
+    `"dontAsk"` maps to `danger-full-access`.
+  </Tab>
+</Tabs>
+
+## Tools available per mode
+
+Each built-in tool requires a minimum permission level.
+
+<AccordionGroup>
+  <Accordion title="read-only — available tools">
+    These tools work in every mode, including `read-only`:
+
+    - `read_file` — read the contents of a file
+    - `glob_search` — find files by glob pattern
+    - `grep_search` — search file contents with a regex
+    - `WebFetch` — fetch content from a URL
+    - `WebSearch` — search the web
+    - `Skill` — invoke a skill prompt
+    - `ToolSearch` — look up available tools
+    - `Sleep` — pause execution
+    - `SendUserMessage` — send a message to the user
+    - `StructuredOutput` — produce structured JSON output
+  </Accordion>
+
+  <Accordion title="workspace-write — additional tools">
+    These tools require `workspace-write` or `danger-full-access`:
+
+    - `write_file` — create or overwrite a file
+    - `edit_file` — make targeted edits to a file
+    - `TodoWrite` — manage the todo list
+    - `NotebookEdit` — edit a Jupyter notebook cell
+    - `Config` — read or update configuration
+  </Accordion>
+
+  <Accordion title="danger-full-access — additional tools">
+    These tools require `danger-full-access`:
+
+    - `bash` — execute arbitrary shell commands
+    - `Agent` — launch a sub-agent
+    - `REPL` — run code in an interactive REPL
+    - `PowerShell` — execute PowerShell commands
+  </Accordion>
+</AccordionGroup>
+
+Plugin tools also declare a `requiredPermission` field in their manifest. The active permission mode gates plugin tools using the same rules. See [Plugins](/configuration/plugins) for details.
+
+## Restricting to specific tools
+
+Use the `--allowedTools` CLI flag to limit the agent to a named subset of tools, regardless of the active permission mode:
+
+```bash
+claw --allowedTools read_file,glob_search,grep_search
+```
+
+This is useful in CI pipelines or automated contexts where you want precise control over which tools can run.
+
+<Warning>
+  `danger-full-access` permits unrestricted shell execution via the `bash`
+  tool. Only use this mode in environments you control and trust. For
+  automated pipelines or shared environments, prefer `read-only` or
+  `workspace-write`.
+</Warning>

@@ -1,0 +1,123 @@
+---
+title: "Testing"
+description: "Running and writing tests for Claw Code"
+---
+
+The Claw Code test suite lives entirely within the Rust workspace. Tests are colocated with the code they cover using standard `#[cfg(test)]` modules, and the `tests/` directory at the repository root contains higher-level validation suites for agentic behaviors.
+
+## Running tests
+
+Run the full workspace test suite from the `rust/` directory:
+
+```bash
+cd rust
+cargo test --workspace
+```
+
+To run tests for a specific crate only:
+
+```bash
+cargo test -p claw-cli
+cargo test -p runtime
+cargo test -p tools
+cargo test -p commands
+```
+
+## Formatting and linting
+
+Format all code in the workspace:
+
+```bash
+cargo fmt --all
+```
+
+Run Clippy across all workspace targets, treating all warnings as errors:
+
+```bash
+cargo clippy --workspace --all-targets -- -D warnings
+```
+
+<Note>
+  Clippy is configured with both `all` and `pedantic` warning sets in `rust/Cargo.toml`. Some specific lints are allowed (`module_name_repetitions`, `missing_panics_doc`, `missing_errors_doc`) to reduce noise on idiomatic patterns.
+</Note>
+
+## Workspace lint rules
+
+The following lints are enforced at the workspace level in `rust/Cargo.toml`:
+
+```toml
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+module_name_repetitions = "allow"
+missing_panics_doc = "allow"
+missing_errors_doc = "allow"
+```
+
+`unsafe_code = "forbid"` is a hard rule — no unsafe Rust is permitted anywhere in the workspace. Clippy `all` and `pedantic` warnings are enabled by default; individual allow exceptions must be justified and minimal.
+
+## Writing new tests
+
+- Add tests in the same crate as the code being tested.
+- Use `#[cfg(test)]` modules at the bottom of the relevant source file.
+- If you change behavior, add or update the corresponding tests in the same pull request.
+- For changes that affect end-to-end agentic behavior, review the `tests/` directory at the repository root and update or extend those validation suites as needed.
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_example() {
+        // arrange
+        // act
+        // assert
+    }
+}
+```
+
+## Pre-PR checklist
+
+Before opening a pull request, run all four checks in order. Every command must exit cleanly.
+
+<Steps>
+  <Step title="Check formatting">
+    ```bash
+    cargo fmt --all --check
+    ```
+    No output means formatting is clean. If files are listed, run `cargo fmt --all` to fix them.
+  </Step>
+
+  <Step title="Check Clippy">
+    ```bash
+    cargo clippy --workspace --all-targets -- -D warnings
+    ```
+    All warnings are treated as errors. Resolve every diagnostic before proceeding.
+  </Step>
+
+  <Step title="Check types">
+    ```bash
+    cargo check --workspace
+    ```
+    Confirms there are no type errors or unresolved imports across the workspace.
+  </Step>
+
+  <Step title="Run all tests">
+    ```bash
+    cargo test --workspace
+    ```
+    All tests must pass. If you changed behavior, add or update the relevant tests in the same PR.
+  </Step>
+</Steps>
+
+<Tip>
+  You can chain all four checks into a single command for a fast pre-push gate:
+
+  ```bash
+  cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings && cargo check --workspace && cargo test --workspace
+  ```
+</Tip>

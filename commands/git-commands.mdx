@@ -1,0 +1,345 @@
+---
+title: "Git commands"
+description: "Git and GitHub workflow commands for managing branches, commits, and pull requests."
+---
+
+Claw Code integrates with git for common workflow operations. All git commands operate on the repository in the current working directory.
+
+<Info>
+  Git commands are available in all permission modes, but modifying the repository (commits, branch changes) requires at least `workspace-write`.
+</Info>
+
+---
+
+## `/diff`
+
+Show the git diff for current workspace changes.
+
+```bash
+/diff
+```
+
+Example output:
+
+```text
+diff --git a/src/lib.rs b/src/lib.rs
+index 3a2b1c4..9f8e7d2 100644
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -12,6 +12,7 @@ pub fn handle_commit(...) {
+     git_status_ok(cwd, &["add", "-A"])?;
++    log::info!("staged all changes");
+     git_status_ok(cwd, &["commit", "--file", ...])?;
+```
+
+---
+
+## `/branch`
+
+List, create, or switch git branches.
+
+```bash
+/branch [list|create <name>|switch <name>]
+```
+
+<AccordionGroup>
+  <Accordion title="/branch list">
+    List all local branches with their current HEAD commit.
+
+    ```bash
+    /branch list
+    /branch
+    ```
+
+    Example output:
+
+    ```text
+    Branch
+      Result           listed
+
+    * main                   a1b2c3d add authentication module
+      feature/oauth2          e4f5g6h implement OAuth2 flow
+      fix/session-timeout     h7i8j9k fix session expiry handling
+    ```
+  </Accordion>
+
+  <Accordion title="/branch create <name>">
+    Create a new branch from the current HEAD and switch to it immediately.
+
+    ```bash
+    /branch create feature/my-new-feature
+    ```
+
+    Example output:
+
+    ```text
+    Branch
+      Result           created and switched
+      Branch           feature/my-new-feature
+    ```
+  </Accordion>
+
+  <Accordion title="/branch switch <name>">
+    Switch to an existing branch.
+
+    ```bash
+    /branch switch main
+    ```
+
+    Example output:
+
+    ```text
+    Branch
+      Result           switched
+      Branch           main
+    ```
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## `/worktree`
+
+Manage git worktrees — additional working trees attached to the same repository.
+
+```bash
+/worktree [list|add <path> [branch]|remove <path>|prune]
+```
+
+<AccordionGroup>
+  <Accordion title="/worktree list">
+    List all worktrees for the repository.
+
+    ```bash
+    /worktree list
+    /worktree
+    ```
+
+    Example output:
+
+    ```text
+    Worktree
+      Result           listed
+
+    /home/user/project        a1b2c3d [main]
+    /home/user/project-oauth  e4f5g6h [feature/oauth2]
+    ```
+  </Accordion>
+
+  <Accordion title="/worktree add <path> [branch]">
+    Add a new worktree at the given path. If a branch name is supplied and that branch already exists, the worktree is checked out to it; otherwise a new branch is created.
+
+    ```bash
+    # New worktree on a new branch
+    /worktree add ../project-hotfix hotfix/cve-2026-001
+
+    # New worktree on an existing branch
+    /worktree add ../project-review feature/oauth2
+    ```
+
+    Example output:
+
+    ```text
+    Worktree
+      Result           added
+      Path             ../project-hotfix
+      Branch           hotfix/cve-2026-001
+    ```
+  </Accordion>
+
+  <Accordion title="/worktree remove <path>">
+    Remove a worktree at the given path.
+
+    ```bash
+    /worktree remove ../project-hotfix
+    ```
+
+    Example output:
+
+    ```text
+    Worktree
+      Result           removed
+      Path             ../project-hotfix
+    ```
+  </Accordion>
+
+  <Accordion title="/worktree prune">
+    Clean up stale worktree references (e.g. after manually deleting a worktree directory).
+
+    ```bash
+    /worktree prune
+    ```
+
+    Example output:
+
+    ```text
+    Worktree
+      Result           pruned
+    ```
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## `/commit`
+
+Generate a commit message and create a git commit. Claw reads the current diff, generates an appropriate commit message, stages all changes with `git add -A`, and commits.
+
+```bash
+/commit
+```
+
+<Steps>
+  <Step title="Inspect workspace changes">
+    Claw runs `git status --short` to check for staged or unstaged changes. If the workspace is clean, the commit is skipped.
+  </Step>
+  <Step title="Generate commit message">
+    The agent analyses the diff and generates a descriptive commit message.
+  </Step>
+  <Step title="Stage and commit">
+    All changes are staged with `git add -A`, then committed using the generated message.
+  </Step>
+</Steps>
+
+Example output:
+
+```text
+Commit
+  Result           created
+  Message file     /tmp/claw-commit-message-1712345678.txt
+
+feat(commands): add /teleport slash command for symbol navigation
+```
+
+If there are no workspace changes:
+
+```text
+Commit
+  Result           skipped
+  Reason           no workspace changes
+```
+
+---
+
+## `/commit-push-pr`
+
+Full workflow: commit workspace changes, push the branch, and open a pull request. This is the fastest path from local changes to an open PR.
+
+```bash
+/commit-push-pr [context]
+```
+
+Pass optional context to help the agent write the PR title and body.
+
+```bash
+/commit-push-pr "fixes the session timeout regression from #342"
+```
+
+<Warning>
+  `/commit-push-pr` requires the [GitHub CLI (`gh`)](https://cli.github.com) to be installed and authenticated (`gh auth login`).
+</Warning>
+
+### What it does step by step
+
+<Steps>
+  <Step title="Detect the default branch">
+    Claw resolves the default branch from `origin/HEAD`, or falls back to checking for `main` or `master`.
+  </Step>
+  <Step title="Create a feature branch if needed">
+    If you are currently on the default branch, Claw creates a new branch automatically. The branch name is derived from the PR title or the context you provided, slugified and prefixed with your username.
+
+    ```text
+    alice/fix-session-timeout-regression
+    ```
+  </Step>
+  <Step title="Commit workspace changes">
+    If there are uncommitted changes, Claw stages everything with `git add -A` and commits using a generated message (same as `/commit`).
+  </Step>
+  <Step title="Push the branch">
+    The branch is pushed to `origin` with `--set-upstream`.
+  </Step>
+  <Step title="Open or update the pull request">
+    Claw calls `gh pr create` with the generated title and body. If a PR already exists for the branch, it prints the existing PR URL instead.
+  </Step>
+</Steps>
+
+Example output:
+
+```text
+Commit/Push/PR
+  Result           created
+  Branch action    created and switched
+  Branch           alice/fix-session-timeout-regression
+  Base             main
+  Body file        /tmp/claw-pr-body-1712345678.md
+  URL              https://github.com/org/repo/pull/99
+
+Commit
+  Result           created
+  Message file     /tmp/claw-commit-message-1712345678.txt
+
+fix(session): restore correct expiry calculation for long-lived tokens
+```
+
+If there are no changes relative to the base branch:
+
+```text
+Commit/Push/PR
+  Result           skipped
+  Reason           no branch changes to push or open as a pull request
+```
+
+---
+
+## `/pr`
+
+Draft or create a pull request from the current conversation context.
+
+```bash
+/pr [context]
+```
+
+Provide optional context to describe what the PR should cover:
+
+```bash
+/pr "document the new /teleport command and update the nav"
+```
+
+The agent uses the conversation history and any supplied context to draft a PR title and body, then invokes `gh pr create`.
+
+<Note>
+  Requires the `gh` CLI. If no branch changes exist relative to the default branch, the command skips PR creation.
+</Note>
+
+---
+
+## `/issue`
+
+Draft or create a GitHub issue from the conversation.
+
+```bash
+/issue [context]
+```
+
+```bash
+/issue "the /compact command does not respect session boundaries"
+```
+
+The agent generates an issue title and body from the conversation and context, then opens it via the `gh` CLI.
+
+<Note>
+  Requires the `gh` CLI to be installed and authenticated.
+</Note>
+
+---
+
+## Prerequisites
+
+<CardGroup cols={2}>
+  <Card title="git" icon="code-branch">
+    All git commands require `git` to be installed and the working directory to be inside a git repository.
+  </Card>
+  <Card title="gh CLI" icon="github">
+    `/commit-push-pr`, `/pr`, and `/issue` require the [GitHub CLI](https://cli.github.com) installed and authenticated with `gh auth login`.
+  </Card>
+</CardGroup>

@@ -1,0 +1,53 @@
+---
+title: "Introduction"
+description: "Claw Code is a high-performance, open-source AI coding agent written in Rust — not the official Anthropic product."
+---
+
+Claw Code (`claw`) is a terminal-native CLI agent that brings advanced LLM capabilities directly into your development workflow. Built in Rust for memory safety, minimal binary size, and high execution speed, it provides an interactive agent shell, workspace-aware tools, and persistent session management.
+
+<Note>
+  Claw Code is an independent open-source implementation inspired by Claude Code. It is not the official Anthropic Claude Code product and is not affiliated with or endorsed by Anthropic.
+</Note>
+
+## What is Claw Code?
+
+Claw Code is a community-driven coding agent you run from the terminal. It connects to LLM providers — Anthropic, any OpenAI-compatible endpoint, or xAI/Grok — and exposes a rich tool suite so the model can read files, run shell commands, search your codebase, and more.
+
+You can use it interactively in a REPL session or non-interactively in scripts and CI pipelines with a single `claw prompt` command.
+
+## Key features
+
+- **Rust-powered** — Built with Rust for memory safety, minimal binary size, and high execution speed.
+- **Agentic CLI** — Interactive shell and one-shot prompt support for seamless terminal workflows.
+- **Model flexible** — Supports Anthropic-compatible and OpenAI-compatible providers, plus xAI/Grok aliases.
+- **Workspace aware** — Context-aware tools designed to understand your local codebase.
+- **Session persistence** — Resumable sessions via JSON state management.
+- **Extensible** — Plugin-ready architecture for custom tools and skills.
+
+## Repository structure
+
+| Path | Description |
+|------|-------------|
+| `rust/` | Core CLI and runtime implementation. Contains the `claw-cli` and `runtime` crates. |
+| `src/` | Python support code and utilities. |
+| `tests/` | Verification suites for agentic behaviors. |
+| `CLAW.md` | Internal workflow documentation for the project. |
+
+The main binary lives in `rust/crates/claw-cli`. The runtime crate (`rust/crates/runtime`) handles configuration, MCP integration, session management, and the tool execution loop.
+
+## Get started
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Install Claw Code and run your first AI-powered prompt in minutes.
+  </Card>
+  <Card title="Authentication" icon="key" href="/authentication">
+    Configure API credentials for Anthropic, OpenAI-compatible providers, or xAI/Grok.
+  </Card>
+  <Card title="Slash commands" icon="terminal" href="/commands/slash-commands">
+    Explore the full set of interactive slash commands available in the REPL.
+  </Card>
+  <Card title="Built-in tools" icon="wrench" href="/commands/tools">
+    Learn about the built-in tool suite: bash, file ops, web search, and more.
+  </Card>
+</CardGroup>

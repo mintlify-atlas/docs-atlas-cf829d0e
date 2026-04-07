@@ -1,0 +1,131 @@
+---
+title: "One-shot prompts"
+description: "Run a single prompt non-interactively and exit — ideal for scripts, CI pipelines, and shell composition."
+---
+
+The `prompt` subcommand runs a single prompt and exits. No REPL is opened. Output is written to stdout, making it easy to pipe into other tools or capture in scripts.
+
+## Basic usage
+
+```bash
+claw prompt "summarize this workspace"
+```
+
+Words after `prompt` are joined into a single prompt string — quoting is optional:
+
+```bash
+claw prompt explain the main function in main.rs
+```
+
+Both of the following are equivalent:
+
+```bash
+claw prompt "explain the main function in main.rs"
+claw prompt explain the main function in main.rs
+```
+
+You can also use the `-p` shorthand (Claude Code compat):
+
+```bash
+claw -p "explain the main function in main.rs"
+```
+
+## Output formats
+
+Control output with `--output-format`. The flag must appear before the `prompt` subcommand:
+
+<CodeGroup>
+
+```bash text (default)
+claw --output-format text prompt "what does session.rs do?"
+```
+
+```bash json
+claw --output-format json prompt "what does session.rs do?"
+```
+
+</CodeGroup>
+
+### Text output
+
+Plain text is the default. The model's response is printed to stdout with streaming progress rendered to the terminal.
+
+### JSON output
+
+`--output-format json` returns a single JSON object on stdout:
+
+```json
+{
+  "message": "session.rs defines the Session struct...",
+  "model": "claude-opus-4-6",
+  "iterations": 1,
+  "tool_uses": [],
+  "tool_results": [],
+  "usage": {
+    "input_tokens": 512,
+    "output_tokens": 128,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0
+  }
+}
+```
+
+<Note>
+`ndjson` is defined in the argument schema but is resolved to `json` in the current runtime. Use `json` for machine-readable output.
+</Note>
+
+## Combining flags
+
+All global flags can be combined with `prompt`:
+
+```bash
+claw --model sonnet --permission-mode read-only prompt "explain main.rs"
+```
+
+```bash
+claw --model claude-haiku-4-5-20251213 --output-format json prompt "list all public functions"
+```
+
+### Available flags
+
+| Flag | Description | Default |
+|---|---|---|
+| `--model <name>` | Model to use. Accepts full IDs or aliases: `opus`, `sonnet`, `haiku`. | `claude-opus-4-6` |
+| `--permission-mode <mode>` | `read-only`, `workspace-write`, or `danger-full-access`. | `danger-full-access` |
+| `--output-format <fmt>` | `text` or `json`. (`ndjson` is accepted but resolves to `json`.) | `text` |
+| `--allowedTools <list>` | Restrict which tools the model can call. Comma-separated; aliases like `read`, `glob`, `grep` are accepted. | All tools |
+
+## Using in CI pipelines
+
+One-shot mode is well-suited for CI tasks. Set `ANTHROPIC_API_KEY` in your environment, then call `claw prompt` as a build step:
+
+```bash
+export ANTHROPIC_API_KEY="sk-ant-..."
+
+# Generate a summary of recent changes
+claw --output-format json prompt "summarize the git diff in one paragraph" \
+  | jq -r '.message'
+```
+
+```bash
+# Enforce read-only mode so no files are modified
+claw --permission-mode read-only prompt "review the error handling in src/main.rs"
+```
+
+<Warning>
+In CI, set `--permission-mode read-only` unless your pipeline explicitly needs the agent to modify files. The default is `danger-full-access`.
+</Warning>
+
+## Resume mode with a prompt
+
+Combine `--resume` with a slash command to run a command against a saved session without opening the REPL:
+
+```bash
+claw --resume session.json /status
+claw --resume session.json /export transcript.md
+claw --resume session.json /compact
+```
+
+<Note>
+Only resume-safe slash commands work with `--resume`. These include `/status`, `/cost`, `/compact`, `/clear`, `/export`, `/diff`, `/version`, `/memory`, `/config`, `/init`, `/help`, `/agents`, and `/skills`. Interactive commands like `/model` and `/session` require a live REPL.
+</Note>

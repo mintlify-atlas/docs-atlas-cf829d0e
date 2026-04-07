@@ -1,0 +1,214 @@
+---
+title: "Troubleshooting"
+description: Common issues and how to resolve them
+---
+
+<AccordionGroup>
+  <Accordion title="Build fails / cargo errors">
+    Claw Code requires a stable Rust toolchain. If `cargo build` fails with toolchain errors, update your Rust installation:
+
+    ```bash
+    rustup update stable
+    rustup default stable
+    ```
+
+    Then verify the build passes:
+
+    ```bash
+    cargo fmt
+    cargo clippy
+    cargo test --workspace
+    ```
+
+    If the build still fails, check that all workspace dependencies are available and that you are on the `stable` channel, not `nightly` or an older pinned version.
+  </Accordion>
+
+  <Accordion title="API key not found">
+    Claw Code reads credentials from environment variables. If you see an authentication error, verify the correct variable is set for your provider:
+
+    | Provider | Variable |
+    |----------|----------|
+    | Anthropic | `ANTHROPIC_API_KEY` |
+    | OpenAI-compatible | `OPENAI_API_KEY` |
+    | xAI / Grok | `XAI_API_KEY` |
+
+    ```bash
+    # Check the variable is exported
+    echo $ANTHROPIC_API_KEY
+
+    # Set it for the current session
+    export ANTHROPIC_API_KEY=sk-ant-...
+    ```
+
+    Run `claw --help` to see the full list of accepted flags. You can also use `/config env` inside the REPL to inspect which environment values Claw Code has detected.
+  </Accordion>
+
+  <Accordion title="Tool execution denied">
+    By default, Claw Code starts with the `danger-full-access` permission mode. If a tool call is denied, check the active permission mode with `/permissions`:
+
+    ```
+    /permissions
+    ```
+
+    To allow all tool use, switch to `danger-full-access`:
+
+    ```
+    /permissions danger-full-access
+    ```
+
+    Or pass it at startup:
+
+    ```bash
+    claw --permission-mode danger-full-access
+    ```
+
+    The available permission modes are `read-only`, `workspace-write`, and `danger-full-access`.
+  </Accordion>
+
+  <Accordion title="Session file not loading">
+    When using `--resume` or `/resume`, the path must point to a valid session JSON file. Use an absolute path to avoid working-directory ambiguity:
+
+    ```bash
+    claw --resume /absolute/path/to/session.json
+    ```
+
+    Inside the REPL:
+
+    ```
+    /resume /absolute/path/to/session.json
+    ```
+
+    Session files are created with `/export` or automatically when the `--output-format json` flag is used. Verify the file exists and is well-formed JSON before resuming.
+  </Accordion>
+
+  <Accordion title="MCP server not connecting">
+    MCP server configuration is read from the merged config at startup. Inspect the current config with:
+
+    ```
+    /config
+    ```
+
+    Common causes of MCP connection failures:
+
+    - The server command is not in `PATH`. Verify with `which <command>`.
+    - The server binary has not been built or installed.
+    - The config file path specified with `--config` does not exist or has a syntax error.
+
+    Check the config file path and confirm the server command runs independently before starting Claw Code.
+  </Accordion>
+
+  <Accordion title="Plugin not loading">
+    If a plugin does not appear after installation, verify it has a valid manifest and check the plugin list:
+
+    ```
+    /plugin list
+    ```
+
+    Common causes:
+
+    - The plugin manifest is missing required fields or has a syntax error.
+    - The plugin was installed but is disabled. Enable it with `/plugin enable <name>`.
+    - A built-in tool name conflicts with a plugin tool name — Claw Code rejects plugins that declare tools with the same name as built-ins.
+
+    Uninstall and reinstall the plugin if the manifest has been corrected:
+
+    ```
+    /plugin uninstall <plugin-id>
+    /plugin install <path>
+    ```
+  </Accordion>
+
+  <Accordion title="Unknown skill">
+    If the agent reports that a skill cannot be found, verify that the skill exists in one of the discovery directories and that the directory name matches the requested skill name exactly (comparison is case-insensitive).
+
+    List all discovered skills:
+
+    ```
+    /skills
+    ```
+
+    The expected directory structure for a project-level skill is:
+
+    ```
+    .claw/
+    └── skills/
+        └── my-skill/
+            └── SKILL.md
+    ```
+
+    If the skill does not appear in `/skills` output, check that `SKILL.md` exists inside the skill subdirectory and that the parent `skills/` directory is in one of the [supported discovery locations](/advanced/skills#skill-discovery-locations).
+  </Accordion>
+
+  <Accordion title="JSON output has extra human-readable lines before JSON">
+    This is a known parity gap. When running Claw Code with `--output-format json` and tool use is enabled, the output can include human-readable tool-result lines printed before the final JSON object. This behavior is documented in `PARITY.md`:
+
+    > JSON prompt mode is improved on this branch, but still not clean transport parity: empirical verification shows tool-capable JSON output can emit human-readable tool-result lines before the final JSON object.
+
+    Workaround: if you need clean JSON output, parse the last complete JSON object from the output, or strip non-JSON lines before parsing. A fix to match the TypeScript implementation's output cleanliness is a known pending item.
+  </Accordion>
+
+  <Accordion title="Hooks not executing">
+    Hook configuration is parsed and merged from config files, and is visible via `/config hooks`. However, the runtime hook execution pipeline (PreToolUse, PostToolUse) is not yet implemented in the Rust port.
+
+    From `PARITY.md`:
+
+    > No actual hook execution pipeline in `rust/crates/runtime/src/conversation.rs`. No PreToolUse/PostToolUse mutation/deny/rewrite/result-hook behavior.
+
+    Hooks are currently **config-only** — they are read and stored but do not execute. This is a known gap relative to the TypeScript implementation. If your workflow depends on hooks, use the TypeScript CLI until hook execution is implemented.
+  </Accordion>
+
+  <Accordion title="`gh` CLI required for /commit-push-pr">
+    The `/commit-push-pr` command uses the GitHub CLI (`gh`) to create pull requests. If you see an error such as `gh CLI is required for /commit-push-pr`, install the GitHub CLI:
+
+    ```bash
+    # macOS
+    brew install gh
+
+    # Linux (Debian/Ubuntu)
+    sudo apt install gh
+
+    # Or download from https://cli.github.com/
+    ```
+
+    After installation, authenticate the CLI:
+
+    ```bash
+    gh auth login
+    ```
+
+    Then retry `/commit-push-pr` from the Claw Code REPL.
+  </Accordion>
+</AccordionGroup>
+
+## Environment variables reference
+
+Claw Code respects the following environment variables in addition to the standard API key variables:
+
+| Variable | Description |
+|----------|-------------|
+| `ANTHROPIC_API_KEY` | Anthropic API key |
+| `ANTHROPIC_BASE_URL` | Override Anthropic API base URL |
+| `OPENAI_API_KEY` | OpenAI-compatible API key |
+| `OPENAI_BASE_URL` | Override OpenAI-compatible base URL |
+| `XAI_API_KEY` | xAI / Grok API key |
+| `XAI_BASE_URL` | Override xAI base URL |
+| `CLAW_PERMISSION_MODE` | Default permission mode (`read-only`, `workspace-write`, `danger-full-access`) |
+| `CLAW_AGENT_STORE` | Override agent output file directory (default: `.claw-agents/`) |
+| `CLAW_TODO_STORE` | Override todo task list file path |
+| `CLAW_WEB_SEARCH_BASE_URL` | Override the search engine base URL for `WebSearch` |
+| `CLAW_CONFIG_HOME` | Override the Claw config home directory |
+| `CODEX_HOME` | Override the Codex home directory (used for skill and agent discovery) |
+
+## Verification commands
+
+Use these commands to confirm the build is healthy after making changes:
+
+```bash
+cargo fmt
+cargo clippy
+cargo test --workspace
+```
+
+## Getting help
+
+If you encounter an issue not covered here, open a GitHub issue at [https://github.com/soongenwong/claudecode/issues](https://github.com/soongenwong/claudecode/issues). Include the Claw Code version (`/version`), the relevant error output, and the steps to reproduce.

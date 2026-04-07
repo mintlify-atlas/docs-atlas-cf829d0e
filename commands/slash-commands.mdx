@@ -1,0 +1,193 @@
+---
+title: "Slash commands"
+description: "Complete reference for all slash commands available in the Claw Code REPL."
+---
+
+Slash commands start with `/` and are available in the interactive REPL. Type `/` and press **Tab** to autocomplete command names and see argument hints inline.
+
+<Tip>
+  Commands marked **[resume]** are also available when launching Claw with `claw --resume SESSION.json`.
+</Tip>
+
+---
+
+## Core flow
+
+Commands for controlling the agent, session state, and model configuration.
+
+| Command | Description | Resume |
+|---|---|---|
+| `/help` | Show available slash commands | ✓ |
+| `/status` | Show current session status | ✓ |
+| `/compact` | Compact local session history | ✓ |
+| `/model [model]` | Show or switch the active model | |
+| `/permissions [read-only\|workspace-write\|danger-full-access]` | Show or switch the active permission mode | |
+| `/cost` | Show cumulative token usage for this session | ✓ |
+
+### `/model`
+
+Run `/model` with no arguments to print the currently active model. Pass a model name to switch immediately.
+
+```bash
+/model
+/model claude-opus-4-6
+```
+
+### `/permissions`
+
+Switch the agent's permission mode for the current session. See [permission modes](/commands/tools#permission-levels) for what each level allows.
+
+```bash
+/permissions
+/permissions read-only
+/permissions workspace-write
+/permissions danger-full-access
+```
+
+---
+
+## Workspace & memory
+
+Commands for inspecting and initialising your project workspace, config, and memory files.
+
+| Command | Description | Resume |
+|---|---|---|
+| `/config [env\|hooks\|model\|plugins]` | Inspect Claw config files or merged sections | ✓ |
+| `/memory` | Inspect loaded Claw instruction memory files | ✓ |
+| `/init` | Create a starter `CLAW.md` for this repo | ✓ |
+| `/diff` | Show git diff for current workspace changes | ✓ |
+| `/version` | Show CLI version and build information | ✓ |
+| `/teleport <symbol-or-path>` | Jump to a file or symbol by searching the workspace | |
+
+### `/config`
+
+Run without arguments to print all merged config. Pass a section name to narrow output.
+
+```bash
+/config
+/config env
+/config hooks
+/config model
+/config plugins
+```
+
+### `/teleport`
+
+Fuzzy-search the workspace for a file or symbol and open it directly.
+
+```bash
+/teleport src/lib.rs
+/teleport handle_commit_slash_command
+```
+
+---
+
+## Sessions & output
+
+Commands for managing and persisting sessions.
+
+| Command | Description | Resume |
+|---|---|---|
+| `/clear [--confirm]` | Start a fresh local session | ✓ |
+| `/resume <session-path>` | Load a saved session into the REPL | |
+| `/export [file]` | Export the current conversation to a file | ✓ |
+| `/session [list\|switch <session-id>]` | List or switch managed local sessions | |
+
+### `/clear`
+
+Resets the current session. Pass `--confirm` to skip the confirmation prompt.
+
+```bash
+/clear
+/clear --confirm
+```
+
+### `/resume`
+
+Load a previously exported or auto-saved session file back into the REPL.
+
+```bash
+/resume .claw/sessions/2026-04-07.json
+```
+
+### `/session`
+
+```bash
+/session list
+/session switch abc123
+```
+
+---
+
+## Git & GitHub
+
+Commands for branch management, commits, and pull requests. See [Git commands](/commands/git-commands) for detailed documentation.
+
+| Command | Description | Resume |
+|---|---|---|
+| `/branch [list\|create <name>\|switch <name>]` | List, create, or switch git branches | |
+| `/worktree [list\|add <path> [branch]\|remove <path>\|prune]` | List, add, remove, or prune git worktrees | |
+| `/commit` | Generate a commit message and create a git commit | |
+| `/commit-push-pr [context]` | Commit workspace changes, push the branch, and open a PR | |
+| `/pr [context]` | Draft or create a pull request from the conversation | |
+| `/issue [context]` | Draft or create a GitHub issue from the conversation | |
+
+<Note>
+  `/commit-push-pr` requires the `gh` CLI to be installed and authenticated.
+</Note>
+
+---
+
+## Automation & discovery
+
+Commands for running automated analysis, planning, and managing plugins, agents, and skills.
+
+| Command | Description | Resume |
+|---|---|---|
+| `/bughunter [scope]` | Inspect the codebase for likely bugs | |
+| `/ultraplan [task]` | Run a deep planning prompt with multi-step reasoning | |
+| `/debug-tool-call` | Replay the last tool call with debug details | |
+| `/plugin [list\|install <path>\|enable <name>\|disable <name>\|uninstall <id>\|update <id>]` | Manage Claw Code plugins | |
+| `/agents` | List configured agents | ✓ |
+| `/skills` | List available skills | ✓ |
+
+### `/plugin`
+
+Aliases: `/plugins`, `/marketplace`
+
+Manage installed plugins without leaving the REPL.
+
+```bash
+/plugin list
+/plugin install ./my-plugin
+/plugin enable my-plugin
+/plugin disable my-plugin
+/plugin uninstall my-plugin-id
+/plugin update my-plugin-id
+```
+
+### `/bughunter`
+
+Scan the workspace for likely bugs. Provide an optional scope to narrow the analysis.
+
+```bash
+/bughunter
+/bughunter src/parser
+```
+
+### `/ultraplan`
+
+Invoke a deep planning pass with multi-step reasoning. Optionally describe the task to plan.
+
+```bash
+/ultraplan
+/ultraplan "refactor the auth module to support OAuth2"
+```
+
+### `/debug-tool-call`
+
+Re-runs the most recent tool call and prints full debug output including inputs, outputs, and timing.
+
+```bash
+/debug-tool-call
+```

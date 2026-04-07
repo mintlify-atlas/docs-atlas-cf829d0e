@@ -1,0 +1,134 @@
+---
+title: "Interactive shell"
+description: "Start the Claw REPL and work with the AI agent in a live, streaming session."
+---
+
+Run `claw` with no arguments to open the interactive shell — a persistent REPL where you type prompts, watch responses stream in real time, and control the session with slash commands.
+
+```bash
+claw
+```
+
+On startup, Claw prints a banner with the active workspace, model, permission mode, and session ID:
+
+```
+🦞 Claw Code · ready
+  Workspace        my-project · main
+  Directory        /home/user/my-project
+  Model            claude-opus-4-6
+  Permissions      danger-full-access
+  Session          a1b2c3d4
+  Quick start      /init · /help · /status
+  Editor           Tab completes slash commands · /vim toggles modal editing
+  Multiline        Shift+Enter or Ctrl+J inserts a newline
+```
+
+## Starting the shell
+
+<Steps>
+  <Step title="Open a terminal in your project directory">
+    Claw loads workspace context from the directory it is started in. Ancestor directories are also scanned for `CLAW.md` files.
+  </Step>
+  <Step title="Run claw">
+    ```bash
+    claw
+    ```
+  </Step>
+  <Step title="Type a prompt and press Enter">
+    Claw streams the response in real time. When the agent finishes, control returns to the `>` prompt.
+  </Step>
+</Steps>
+
+## CLI flags
+
+Pass flags before any subcommand to configure the session:
+
+| Flag | Description | Default |
+|---|---|---|
+| `--model <name>` | Model to use for the session. Accepts full model IDs or short aliases (`opus`, `sonnet`, `haiku`). | `claude-opus-4-6` |
+| `--permission-mode <mode>` | Tool permission policy. One of `read-only`, `workspace-write`, or `danger-full-access`. | `danger-full-access` |
+| `--output-format <fmt>` | Output format for non-interactive runs. One of `text` or `json`. Not used in the REPL. | `text` |
+| `--allowedTools <list>` | Comma-separated list of tool names to allow. Restricts which tools the agent can call. | All tools |
+| `--dangerously-skip-permissions` | Skip all permission checks. Equivalent to `danger-full-access` but skips the mode system entirely. | Off |
+
+### Model aliases
+
+| Alias | Resolves to |
+|---|---|
+| `opus` | `claude-opus-4-6` |
+| `sonnet` | `claude-sonnet-4-6` |
+| `haiku` | `claude-haiku-4-5-20251213` |
+
+```bash
+claw --model sonnet
+claw --model claude-haiku-4-5-20251213
+claw --permission-mode read-only
+```
+
+## REPL features
+
+### Streaming responses
+
+Responses stream token-by-token as they are generated. A spinner shows while the model is thinking, and the output renders progressively so you can read it before the turn completes.
+
+### Slash commands
+
+Type `/` at the prompt to invoke built-in commands. Press `Tab` to auto-complete command names. Run `/help` to print the full list grouped by category:
+
+```
+/help
+```
+
+Key commands available in the REPL:
+
+| Command | Description |
+|---|---|
+| `/status` | Show session status, token usage, and workspace info |
+| `/model [name]` | Show or switch the active model |
+| `/permissions [mode]` | Show or switch the active permission mode |
+| `/cost` | Show cumulative token usage for this session |
+| `/compact` | Compact session history to reduce token usage |
+| `/clear [--confirm]` | Start a fresh session |
+| `/resume <path>` | Load a saved session file into the REPL |
+| `/export [file]` | Export the current conversation to a file |
+| `/session [list\|switch]` | List or switch managed local sessions |
+| `/diff` | Show git diff for current workspace changes |
+| `/commit` | Generate a commit message and create a git commit |
+| `/exit` or `/quit` | Save the session and exit |
+
+### Tab completion
+
+Press `Tab` after typing `/` (or a partial command name) to complete slash commands. Claw ranks completions by prefix match and Levenshtein distance, so near-matches are suggested even if you mistype.
+
+### Multiline input
+
+- **Shift+Enter** or **Ctrl+J** inserts a newline without submitting.
+- Press **Enter** on a blank line to submit the full prompt.
+
+### Vim editing mode
+
+Toggle modal (Vim) editing with `/vim`. Normal mode, insert mode, and basic motions are supported.
+
+## CLAW.md workspace context
+
+Claw walks the ancestor directory tree from the current working directory, loading any `CLAW.md` files it finds. These files inject project-specific instructions and conventions into the system prompt automatically — no manual configuration required.
+
+<Tip>
+Run `/init` to scaffold a starter `CLAW.md`, `.claw.json`, and local session files for your project.
+</Tip>
+
+Use `/memory` to inspect which instruction memory files are currently loaded.
+
+## Resuming a previous session
+
+Use the `--resume` flag to reload a saved session file when starting the shell:
+
+```bash
+claw --resume session.json
+```
+
+Claw loads the conversation history and metadata from the file, then drops you back into an interactive session with full context intact. You can also resume from within a running REPL using `/resume <session-path>`.
+
+<Tip>
+Use `--resume` when returning to a long-running coding task. The full conversation history is preserved, so the model retains context about decisions made in earlier turns.
+</Tip>

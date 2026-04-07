@@ -1,80 +1,117 @@
 ---
 title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+description: "Install Claw Code from source and run your first AI-powered prompt in minutes."
 ---
 
-## Get started in three steps
+## Prerequisites
 
-Get your documentation site running locally and make your first customization.
+Before you begin, make sure you have the following:
 
-### Step 1: Set up your local environment
+- **Rust stable toolchain** — Install from [rustup.rs](https://rustup.rs). Run `rustup update stable` if you already have Rust to ensure you are on a stable release.
+- **API credentials** — A key for at least one supported provider (Anthropic, OpenAI-compatible, or xAI/Grok). See [Authentication](/authentication) for details.
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+## Installation
 
-### Step 2: Deploy your changes
+<Steps>
+  <Step title="Clone the repository">
+    Clone the Claw Code repository to your local machine:
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    ```bash
+    git clone https://github.com/soongenwong/claudecode
+    cd claudecode
+    ```
+  </Step>
+  <Step title="Build the release binary">
+    Navigate to the `rust/` workspace and build the `claw-cli` crate in release mode:
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+    ```bash
+    cd rust && cargo build --release -p claw-cli
+    ```
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+    The compiled binary is placed at `rust/target/release/claw`.
+  </Step>
+  <Step title="Install globally">
+    Install the binary to your Cargo bin directory so it is available on your `PATH`:
 
-### Step 3: Go live
+    ```bash
+    cargo install --path crates/claw-cli --locked
+    ```
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+    Run this command from inside the `rust/` directory. The `--locked` flag ensures dependencies match the checked-in `Cargo.lock`.
+  </Step>
+  <Step title="Set your API key">
+    Export your API key as an environment variable. Anthropic is the default provider:
+
+    ```bash
+    export ANTHROPIC_API_KEY="sk-ant-..."
+    ```
+
+    For other providers, see [Authentication](/authentication).
+  </Step>
+  <Step title="Run Claw Code">
+    Start the interactive shell:
+
+    ```bash
+    claw
+    ```
+
+    You should see the Claw Code REPL prompt. Type a message or `/help` to explore available commands.
+  </Step>
+</Steps>
+
+## First commands
+
+Once `claw` is installed, try these commands to get oriented:
+
+**Open the interactive shell**
+
+```bash
+claw
+```
+
+Starts a persistent REPL session. Use slash commands like `/help`, `/status`, and `/exit` to navigate.
+
+**Run a one-shot prompt**
+
+```bash
+claw prompt "summarize this workspace"
+```
+
+Sends a single prompt to the model and exits. Useful in scripts and CI pipelines.
+
+**Resume a previous session**
+
+```bash
+claw --resume session.json /status
+```
+
+Reloads a saved session from a JSON file and continues where you left off.
+
+**Show all options**
+
+```bash
+claw --help
+```
+
+Prints the full command reference, including flags for `--model`, `--permission-mode`, `--output-format`, and all subcommands.
+
+<Tip>
+  Run `claw --help` for the complete command list, including agents, skills, and system-prompt flows. The default model is `claude-opus-4-6`, which you can override with `--model`.
+</Tip>
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
-
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Authentication" icon="key" href="/authentication">
+    Switch providers or configure OAuth login.
+  </Card>
+  <Card title="Interactive shell" icon="square-terminal" href="/usage/interactive-shell">
+    Learn the full REPL feature set and slash commands.
+  </Card>
+  <Card title="Session management" icon="floppy-disk" href="/usage/session-management">
+    Save and resume conversations as portable JSON files.
+  </Card>
+  <Card title="Configuration" icon="gear" href="/configuration/overview">
+    Customize Claw Code with project and user settings files.
+  </Card>
 </CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>

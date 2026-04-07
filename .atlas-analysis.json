@@ -1,0 +1,141 @@
+{
+  "projectType": "cli-tool",
+  "projectName": "Claw Code",
+  "projectDescription": "A high-performance, open-source AI coding agent written in Rust that brings LLM-powered agentic workflows directly into your terminal.",
+  "theme": "luma",
+  "primaryColor": "#848c8e",
+  "lightColor": "#11161e",
+  "darkColor": "#cfd0d2",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "authentication"
+            ]
+          },
+          {
+            "group": "Using Claw",
+            "pages": [
+              "usage/interactive-shell",
+              "usage/one-shot-prompts",
+              "usage/session-management"
+            ]
+          },
+          {
+            "group": "Commands",
+            "pages": [
+              "commands/slash-commands",
+              "commands/tools",
+              "commands/git-commands"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/overview",
+              "configuration/mcp-servers",
+              "configuration/hooks",
+              "configuration/plugins",
+              "configuration/permissions"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "advanced/skills",
+              "advanced/agents",
+              "advanced/custom-providers",
+              "advanced/troubleshooting"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Contributing",
+        "groups": [
+          {
+            "group": "Development",
+            "pages": [
+              "contributing/overview",
+              "contributing/architecture",
+              "contributing/testing"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Rust-powered CLI with memory safety and minimal binary size",
+    "Interactive REPL shell with slash command support",
+    "One-shot prompt mode for non-interactive use",
+    "Multi-provider support: Anthropic, OpenAI-compatible, xAI/Grok",
+    "Built-in tool suite: bash, file read/write/edit, glob, grep, web fetch/search",
+    "Session persistence and resumable conversations via JSON state",
+    "MCP (Model Context Protocol) server integration",
+    "Plugin system for extending tools and functionality",
+    "Skills system for loading local SKILL.md instruction files",
+    "Agent spawning for parallel sub-agent task delegation",
+    "OAuth authentication flow with credential persistence",
+    "Workspace-aware CLAW.md discovery for project context",
+    "Git integration: branch, worktree, commit, PR workflows",
+    "Configurable permission modes: read-only, workspace-write, danger-full-access"
+  ],
+  "publicApiSurface": [
+    "claw (interactive shell)",
+    "claw prompt <text>",
+    "claw login",
+    "claw logout",
+    "claw --model <model>",
+    "claw --permission-mode <mode>",
+    "claw --output-format <text|json|ndjson>",
+    "claw --resume <session.json>",
+    "/help",
+    "/status",
+    "/compact",
+    "/model [model]",
+    "/permissions [mode]",
+    "/clear",
+    "/cost",
+    "/resume <session-path>",
+    "/config [env|hooks|model|plugins]",
+    "/memory",
+    "/init",
+    "/diff",
+    "/version",
+    "/export [file]",
+    "/session [list|switch]",
+    "/plugin [list|install|enable|disable|uninstall|update]",
+    "/agents",
+    "/skills",
+    "/branch [list|create|switch]",
+    "/worktree [list|add|remove|prune]",
+    "/commit",
+    "/commit-push-pr",
+    "/pr",
+    "/issue",
+    "/ultraplan",
+    "/teleport",
+    "/bughunter",
+    "bash tool",
+    "read_file tool",
+    "write_file tool",
+    "edit_file tool",
+    "glob_search tool",
+    "grep_search tool",
+    "WebFetch tool",
+    "WebSearch tool",
+    "TodoWrite tool",
+    "Skill tool",
+    "Agent tool",
+    "REPL tool",
+    "NotebookEdit tool",
+    "Config tool"
+  ]
+}

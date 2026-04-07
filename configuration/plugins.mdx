@@ -1,0 +1,190 @@
+---
+title: "Plugins"
+description: "Extend Claw Code with custom tools using the plugin system. Install, enable, disable, and manage plugins via the /plugin slash command."
+---
+
+Plugins are packages that add custom tools to the Claw agent. Each plugin declares a manifest (`plugin.json`) that describes its tools, required permissions, and lifecycle hooks. When a plugin is enabled, its tools are registered into the tool registry and become available to the agent automatically.
+
+## Plugin kinds
+
+| Kind | Description |
+|---|---|
+| `builtin` | Compiled into the Claw binary |
+| `bundled` | Shipped with the Claw distribution and synced automatically |
+| `external` | Installed from a local directory path by you |
+
+## Managing plugins with /plugin
+
+All plugin management happens through the `/plugin` slash command in the REPL. The aliases `/plugins` and `/marketplace` also work.
+
+<AccordionGroup>
+  <Accordion title="/plugin list">
+    List all installed plugins with their version and enabled/disabled status.
+
+    ```
+    /plugin list
+    ```
+
+    Output example:
+
+    ```
+    Plugins
+      my-formatter         v1.2.0      enabled
+      audit-helper         v0.4.1      disabled
+    ```
+  </Accordion>
+
+  <Accordion title="/plugin install <path>">
+    Install a plugin from a local directory. Claw reads the `plugin.json`
+    manifest from the directory, copies the plugin to the install root, and
+    enables it immediately.
+
+    ```
+    /plugin install ./tools/my-formatter
+    ```
+
+    The directory must contain a valid `plugin.json` at its root or at
+    `.claw-plugin/plugin.json`.
+
+    <Note>
+      Installing from a remote URL or registry is not yet implemented. Only
+      local directory paths are supported.
+    </Note>
+  </Accordion>
+
+  <Accordion title="/plugin enable <name>">
+    Enable an installed plugin by name or plugin ID. Claw writes the new state
+    to `~/.claw/settings.json` under `enabledPlugins` and reloads the runtime.
+
+    ```
+    /plugin enable my-formatter
+    ```
+  </Accordion>
+
+  <Accordion title="/plugin disable <name>">
+    Disable a plugin without uninstalling it. The plugin's tools are removed
+    from the tool registry until it is re-enabled.
+
+    ```
+    /plugin disable audit-helper
+    ```
+  </Accordion>
+
+  <Accordion title="/plugin uninstall <id>">
+    Remove an installed plugin entirely. Claw deletes its files from the install
+    root and removes the registry entry.
+
+    ```
+    /plugin uninstall my-formatter@external
+    ```
+
+    Use the full plugin ID (shown by `/plugin list`) to avoid ambiguity.
+    Bundled plugins cannot be uninstalled — use `/plugin disable` instead.
+  </Accordion>
+
+  <Accordion title="/plugin update <id>">
+    Re-install a plugin from its original source to pick up changes. Works for
+    plugins installed from local paths.
+
+    ```
+    /plugin update my-formatter@external
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Plugin config in settings.json
+
+The enabled/disabled state for each plugin is written to `enabledPlugins` in `~/.claw/settings.json` automatically when you use `/plugin enable` or `/plugin disable`. You can also set it manually:
+
+```json
+{
+  "enabledPlugins": {
+    "my-formatter@external": true,
+    "audit-helper@external": false
+  }
+}
+```
+
+Advanced plugin directory settings live under the `plugins` key:
+
+```json
+{
+  "plugins": {
+    "externalDirectories": ["./local-plugins"],
+    "installRoot": "~/.claw/plugins/installed",
+    "registryPath": "~/.claw/plugins/installed.json",
+    "bundledRoot": null
+  }
+}
+```
+
+| Field | Description |
+|---|---|
+| `externalDirectories` | Additional directories Claw scans for plugins at startup |
+| `installRoot` | Where `/plugin install` copies plugin files |
+| `registryPath` | Path to the installed plugin registry JSON file |
+| `bundledRoot` | Override the path to bundled plugins (advanced) |
+
+## Plugin manifest format
+
+A plugin must include a `plugin.json` manifest. The required fields are `name`, `version`, and `description`. Tools are declared in the `tools` array.
+
+```json
+{
+  "name": "my-formatter",
+  "version": "1.0.0",
+  "description": "Formats code files in the workspace",
+  "permissions": ["read", "write"],
+  "defaultEnabled": true,
+  "tools": [
+    {
+      "name": "format_file",
+      "description": "Run the formatter on a file",
+      "command": "./bin/format.sh",
+      "args": [],
+      "requiredPermission": "workspace-write",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string" }
+        },
+        "required": ["path"]
+      }
+    }
+  ],
+  "hooks": {
+    "PreToolUse": [],
+    "PostToolUse": []
+  },
+  "lifecycle": {
+    "Init": [],
+    "Shutdown": []
+  }
+}
+```
+
+### Tool permissions
+
+Each tool declares the minimum permission mode required to call it:
+
+| `requiredPermission` | Permission mode needed |
+|---|---|
+| `read-only` | Any mode |
+| `workspace-write` | `workspace-write` or `danger-full-access` |
+| `danger-full-access` | `danger-full-access` only |
+
+If `requiredPermission` is omitted, it defaults to `danger-full-access`.
+
+## Plugin environment variables
+
+When Claw invokes a plugin tool, it sets the following environment variables for the tool process:
+
+| Variable | Value |
+|---|---|
+| `CLAW_PLUGIN_ID` | The plugin's ID (e.g. `my-formatter@external`) |
+| `CLAW_PLUGIN_NAME` | The plugin's display name |
+| `CLAW_TOOL_NAME` | The name of the tool being called |
+| `CLAW_TOOL_INPUT` | The tool input as a JSON string |
+| `CLAW_PLUGIN_ROOT` | The plugin's install directory |
+
+Tool input is also piped to the process's stdin as JSON.

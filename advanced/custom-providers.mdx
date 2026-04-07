@@ -1,0 +1,162 @@
+---
+title: "Custom providers"
+description: Configure alternative LLM providers including local models
+---
+
+Claw Code routes API requests through one of three provider backends depending on the model name and environment variables. You can switch providers by setting the appropriate environment variables before starting the CLI.
+
+## Supported providers
+
+<Tabs>
+  <Tab title="Anthropic (default)">
+    Anthropic's Claude models are the default provider. Authentication is resolved from environment variables or saved OAuth credentials.
+
+    **Environment variables:**
+
+    | Variable | Description |
+    |----------|-------------|
+    | `ANTHROPIC_API_KEY` | API key for direct API access |
+    | `ANTHROPIC_BASE_URL` | Override the API base URL (optional) |
+
+    **Example:**
+
+    ```bash
+    export ANTHROPIC_API_KEY=sk-ant-...
+    claw
+    ```
+
+    **Available model aliases:**
+
+    | Alias | Resolves to |
+    |-------|-------------|
+    | `opus` | `claude-opus-4-6` |
+    | `sonnet` | `claude-sonnet-4-6` |
+    | `haiku` | `claude-haiku-4-5-20251213` |
+    | `claude-opus-4-6` | `claude-opus-4-6` |
+    | `claude-sonnet-4-6` | `claude-sonnet-4-6` |
+    | `claude-haiku-4-5-20251213` | `claude-haiku-4-5-20251213` |
+  </Tab>
+  <Tab title="xAI / Grok">
+    Models whose names start with `grok` are routed to xAI's API using an OpenAI-compatible transport.
+
+    **Environment variables:**
+
+    | Variable | Description |
+    |----------|-------------|
+    | `XAI_API_KEY` | API key for xAI |
+    | `XAI_BASE_URL` | Override the xAI base URL (optional) |
+
+    **Example:**
+
+    ```bash
+    export XAI_API_KEY=xai-...
+    claw --model grok-3
+    ```
+
+    **Available model aliases:**
+
+    | Alias | Resolves to |
+    |-------|-------------|
+    | `grok` | `grok-3` |
+    | `grok-3` | `grok-3` |
+    | `grok-mini` | `grok-3-mini` |
+    | `grok-3-mini` | `grok-3-mini` |
+    | `grok-2` | `grok-2` |
+  </Tab>
+  <Tab title="OpenAI-compatible">
+    Any server that exposes an OpenAI-compatible chat completions API (including local inference servers) can be used by setting `OPENAI_API_KEY` and `OPENAI_BASE_URL`.
+
+    **Environment variables:**
+
+    | Variable | Description |
+    |----------|-------------|
+    | `OPENAI_API_KEY` | API key (use any non-empty string for local servers) |
+    | `OPENAI_BASE_URL` | Base URL of the OpenAI-compatible endpoint |
+
+    **Example — OpenAI:**
+
+    ```bash
+    export OPENAI_API_KEY=sk-...
+    claw --model gpt-4o
+    ```
+
+    **Example — local Ollama:**
+
+    ```bash
+    export OPENAI_BASE_URL=http://localhost:11434/v1
+    export OPENAI_API_KEY=ollama
+    claw --model llama3
+    ```
+
+    **Example — LM Studio:**
+
+    ```bash
+    export OPENAI_BASE_URL=http://localhost:1234/v1
+    export OPENAI_API_KEY=lm-studio
+    claw --model mistral-7b
+    ```
+  </Tab>
+</Tabs>
+
+## Switching models
+
+### At the command line
+
+Pass `--model` when starting Claw Code:
+
+```bash
+claw --model claude-sonnet-4-6
+claw --model grok-3
+claw --model llama3
+```
+
+The default model is `claude-opus-4-6`.
+
+### In the REPL
+
+Use the `/model` slash command to show the current model or switch to a different one mid-session:
+
+```
+/model
+/model claude-sonnet-4-6
+/model grok-3-mini
+```
+
+## Provider detection
+
+Claw Code determines the provider backend at startup using this order:
+
+1. If the model name matches a known alias in the model registry, use that alias's provider.
+2. If `ANTHROPIC_API_KEY` or saved OAuth credentials are available, use the Anthropic provider.
+3. If `OPENAI_API_KEY` is set, use the OpenAI-compatible provider.
+4. If `XAI_API_KEY` is set, use the xAI provider.
+5. Fall back to the Anthropic provider.
+
+## Using local models
+
+If your local inference server exposes an OpenAI-compatible API, set `OPENAI_BASE_URL` to its endpoint and `OPENAI_API_KEY` to any non-empty string (local servers typically do not validate the key).
+
+```bash
+# Ollama
+export OPENAI_BASE_URL=http://localhost:11434/v1
+export OPENAI_API_KEY=ollama
+claw --model llama3.2
+
+# LM Studio
+export OPENAI_BASE_URL=http://localhost:1234/v1
+export OPENAI_API_KEY=lm-studio
+claw --model mistral-nemo
+```
+
+<Warning>
+Tool use reliability varies significantly across local models. Many smaller or quantized models do not reliably produce valid tool call JSON, which will cause the agent loop to stall or error. Prefer models that have been explicitly fine-tuned for function calling.
+</Warning>
+
+## Token limits
+
+Claw Code applies model-specific token limits automatically:
+
+| Model family | Max output tokens |
+|-------------|-------------------|
+| `*opus*` | 32,000 |
+| All others | 64,000 |

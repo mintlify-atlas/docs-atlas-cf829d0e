@@ -1,0 +1,114 @@
+---
+title: "Architecture"
+description: "How Claw Code is structured across Rust crates"
+---
+
+Claw Code is organized as a Rust workspace with a collection of focused crates. Understanding the layout helps you find the right place to make a change and understand how the pieces fit together.
+
+## Repository structure
+
+```
+claudecode/
+├── rust/         # Rust workspace — primary implementation
+├── src/          # Python source files and utilities
+├── tests/        # Validation suites for agentic behaviors
+└── CLAW.md       # Internal workflow documentation
+```
+
+<Info>
+  `CLAW.md` is the authoritative source for workspace-specific workflow guidance. It is read automatically by the Claw Code agent when operating in this repository.
+</Info>
+
+The `src/` and `tests/` surfaces should stay consistent with each other — update both when behavior changes.
+
+## Rust workspace crates
+
+The workspace is declared in `rust/Cargo.toml` and contains the following crates under `rust/crates/`:
+
+<AccordionGroup>
+  <Accordion title="claw-cli — main binary">
+    The entry point for the `claw` executable. Handles argument parsing with `clap`, drives the REPL loop, manages streaming output rendering, and wires together the runtime and API layers. This is the crate you build and install when running `cargo build --release -p claw-cli`.
+  </Accordion>
+
+  <Accordion title="runtime — conversation engine">
+    The core of the agent loop. Contains session management, config loading and merging, MCP server bootstrap and client plumbing, OAuth support, file operations, bash execution, and hook configuration parsing. The main conversation loop lives in `runtime/src/conversation.rs`.
+  </Accordion>
+
+  <Accordion title="tools — tool registry and execution">
+    Defines the tool registry via `mvp_tool_specs()` and `GlobalToolRegistry`. Implements all built-in tools (shell, file read/write, glob, grep, web fetch, todo, skill, agent, config, notebook, repl, powershell) and dispatches tool execution requests from the conversation runtime.
+  </Accordion>
+
+  <Accordion title="commands — slash command registry">
+    Registers and implements slash commands available in the REPL. Built-in commands include `/help`, `/status`, `/compact`, `/model`, `/permissions`, `/clear`, `/cost`, `/resume`, `/config`, `/memory`, `/init`, `/diff`, `/version`, `/export`, `/session`, `/plugin`, `/agents`, `/skills`, `/branch`, `/worktree`, `/commit`, `/commit-push-pr`, `/pr`, `/issue`, `/bughunter`, `/ultraplan`, `/teleport`, and `/debug-tool-call`. Each command is parsed and dispatched through a shared registry.
+  </Accordion>
+
+  <Accordion title="api — Anthropic API client">
+    A focused HTTP client for the Anthropic messages API. Implements SSE streaming, request/response types, error handling, and model name aliases. This crate has no dependency on the runtime or CLI layers.
+  </Accordion>
+
+  <Accordion title="plugins — plugin manager">
+    Contains `PluginManager`, `PluginTool`, and `PluginMetadata` types along with install, enable, and disable flows. Plugin tools are loaded alongside built-in tools and conflict detection is enforced at registration time.
+  </Accordion>
+
+  <Accordion title="server — HTTP server">
+    An HTTP server crate providing remote or structured IO for the agent. Used when Claw Code is invoked in a server-side or automated context rather than an interactive terminal.
+  </Accordion>
+
+  <Accordion title="lsp — LSP types integration">
+    Provides LSP type bindings (via the `lsp-types` crate) used by tools or completions that interact with language server protocol data.
+  </Accordion>
+
+  <Accordion title="compat-harness — compatibility testing">
+    A testing harness for verifying compatibility behaviors. Used to validate that the Rust implementation matches expected agentic output for specific input scenarios.
+  </Accordion>
+</AccordionGroup>
+
+## Data flow
+
+A single agent turn follows this path:
+
+```
+User input
+  → claw-cli (REPL / argument parsing)
+  → runtime (conversation loop)
+  → api (Anthropic API client, SSE streaming)
+  → runtime (tool call extraction)
+  → tools (tool execution dispatch)
+  → runtime (tool results appended to conversation)
+  → api (next turn request)
+  → claw-cli (rendered output)
+```
+
+The conversation loop in `runtime/src/conversation.rs` is the central coordinator. It calls the API, processes the streamed response, identifies tool use blocks, dispatches each tool through the `tools` crate, collects results, and sends them back in the next API turn.
+
+## Key design decisions
+
+<CardGroup cols={2}>
+  <Card title="Memory safety" icon="shield-check">
+    `unsafe_code` is set to `"forbid"` in workspace lints. No unsafe Rust is permitted anywhere in the workspace.
+  </Card>
+  <Card title="Centralized tool registry" icon="list">
+    All built-in tools are registered through `mvp_tool_specs()` in the `tools` crate. There is no scattered per-file tool registration.
+  </Card>
+  <Card title="Plugin conflict detection" icon="triangle-exclamation">
+    Plugin tools are loaded alongside built-in tools at startup. Name conflicts between plugins and built-ins are detected and reported at registration time.
+  </Card>
+  <Card title="JSON session portability" icon="file-code">
+    Sessions are persisted as plain JSON files. Any session can be resumed across invocations or machines using `claw --resume session.json`.
+  </Card>
+</CardGroup>
+
+## Parity status
+
+<Warning>
+  The Rust implementation is an MVP and does not have full feature parity with the original TypeScript CLI. Consult `PARITY.md` in the repository root for a detailed gap analysis.
+</Warning>
+
+Key gaps relative to the TypeScript implementation:
+
+- **Hooks** — Hook configuration is parsed and merged, but no execution pipeline exists. `PreToolUse` / `PostToolUse` behaviors do not fire at runtime.
+- **Advanced CLI commands** — Many TS command families are not yet ported: `/hooks`, `/mcp`, `/plan`, `/tasks`, `/review`, and remote/structured transport layers.
+- **Skills** — Local `SKILL.md` discovery and the `/skills` command work. The bundled skill registry and MCP skill-builder pipeline from the TS implementation are absent.
+- **Service ecosystem** — Core API, OAuth, and MCP are implemented. Analytics, settings sync, policy limits, team memory, and other TS services are missing.
+
+The tool registry is explicitly named `mvp_tool_specs()` to reflect its status as a starting point rather than a complete parity surface.

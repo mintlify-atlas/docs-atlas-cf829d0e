@@ -1,0 +1,209 @@
+---
+title: "Session management"
+description: "Save, resume, and manage conversation sessions to preserve context across Claw runs."
+---
+
+A Claw session is a JSON file that stores the full conversation history — every user message, assistant response, tool call, and token usage record. Sessions let you pause work, resume it later, and pick up exactly where you left off.
+
+## What a session contains
+
+Sessions are stored as structured JSON with a version field and an ordered list of messages:
+
+```json
+{
+  "version": 1,
+  "messages": [
+    {
+      "role": "user",
+      "blocks": [{ "type": "text", "text": "explain session.rs" }]
+    },
+    {
+      "role": "assistant",
+      "blocks": [{ "type": "text", "text": "session.rs defines..." }],
+      "usage": {
+        "input_tokens": 512,
+        "output_tokens": 128,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0
+      }
+    }
+  ]
+}
+```
+
+Each message has a `role` (`user`, `assistant`, or `tool`), a list of content `blocks`, and optional token usage metadata. Claw persists the session file automatically after every turn.
+
+## Starting and resuming sessions
+
+### Start a new session
+
+Running `claw` with no arguments always creates a new managed session. The session ID is shown in the startup banner and stored under Claw's local session directory.
+
+```bash
+claw
+```
+
+### Resume on startup
+
+Use `--resume` to load a saved session file before the REPL opens:
+
+```bash
+claw --resume session.json
+```
+
+Claw prints a confirmation showing the session path, message count, and turn count, then drops you into the interactive shell with the full conversation history restored.
+
+### Resume from within the REPL
+
+Use `/resume` to load a different session file while the REPL is already running:
+
+```
+/resume path/to/session.json
+```
+
+The existing runtime context is replaced with the loaded session. The current model and permission mode are preserved.
+
+<Tip>
+Use `/resume` to switch between parallel workstreams — for example, loading a session from a different branch or feature context — without restarting the shell.
+</Tip>
+
+## Session slash commands
+
+### `/session`
+
+List and switch between managed local sessions:
+
+```
+/session list
+/session switch <session-id>
+```
+
+`/session list` shows all sessions Claw has created, sorted by last modified time. Each entry includes the session ID, path, message count, and age.
+
+### `/export [file]`
+
+Export the current conversation to a readable transcript file:
+
+```
+/export
+/export transcript.md
+```
+
+With no argument, Claw generates a timestamped filename automatically. The exported file is a human-readable text transcript of the conversation, not the raw JSON session file.
+
+You can also run `/export` against a saved session without opening the REPL:
+
+```bash
+claw --resume session.json /export transcript.md
+```
+
+### `/clear [--confirm]`
+
+Start a fresh session, discarding all conversation history:
+
+```
+/clear --confirm
+```
+
+The `--confirm` flag is required to prevent accidental data loss. Without it, Claw prints a reminder:
+
+```
+clear: confirmation required; run /clear --confirm to start a fresh session.
+```
+
+After clearing, the model and permission mode are preserved, but a new session ID is assigned.
+
+## Managing token usage
+
+Long sessions accumulate context that consumes tokens on every turn. Two commands help manage this.
+
+### `/cost`
+
+Show cumulative token usage for the current session:
+
+```
+/cost
+```
+
+Output:
+
+```
+Cost
+  Input tokens     8192
+  Output tokens    2048
+  Cache create     1024
+  Cache read       4096
+  Total tokens     15360
+
+Next
+  /status          See session + workspace context
+  /compact         Trim local history if the session is getting large
+```
+
+### `/compact`
+
+Compact the session history to reduce token usage on subsequent turns:
+
+```
+/compact
+```
+
+Claw removes earlier messages that fall below its compaction threshold, keeping recent context intact. A report shows how many messages were removed and how many remain:
+
+```
+Compact
+  Result           compacted
+  Messages removed 14
+  Messages kept    6
+  Tip              Use /status to review the trimmed session
+```
+
+If the session is already below the threshold, compaction is skipped:
+
+```
+Compact
+  Result           skipped
+  Reason           Session is already below the compaction threshold
+  Messages kept    6
+```
+
+You can also compact a saved session without opening the REPL:
+
+```bash
+claw --resume session.json /compact
+```
+
+## Session persistence
+
+Sessions are stored locally as JSON files. Claw writes the session file after every completed turn, so a crash or disconnection never loses more than the in-flight turn.
+
+<Tip>
+For long coding tasks — refactoring a module, debugging a complex issue, or building a feature over multiple sittings — save the session path and use `claw --resume session.json` to continue. The model retains full context about earlier decisions, making it far more effective than starting fresh.
+</Tip>
+
+<Note>
+Session files contain your full conversation history in plain text. Treat them like source files: keep them out of public repositories unless you have reviewed their contents.
+</Note>
+
+## Command availability with `--resume`
+
+Several session commands are supported in `--resume` mode (no live REPL required):
+
+| Command | Resume supported |
+|---|---|
+| `/status` | Yes |
+| `/cost` | Yes |
+| `/compact` | Yes |
+| `/clear --confirm` | Yes |
+| `/export [file]` | Yes |
+| `/help` | Yes |
+| `/diff` | Yes |
+| `/version` | Yes |
+| `/memory` | Yes |
+| `/config` | Yes |
+| `/agents` | Yes |
+| `/skills` | Yes |
+| `/resume` | No (requires live REPL) |
+| `/session` | No (requires live REPL) |
+| `/model` | No (requires live REPL) |
+| `/permissions` | No (requires live REPL) |

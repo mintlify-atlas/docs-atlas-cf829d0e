@@ -1,0 +1,137 @@
+---
+title: "Skills"
+description: Load reusable instruction sets from local SKILL.md files
+---
+
+Skills are markdown files (`SKILL.md`) that inject pre-written instructions into the agent at runtime. When the agent calls the `Skill` tool, Claw Code reads the corresponding `SKILL.md` from disk and makes its contents available as a prompt for the current task.
+
+Skills are ideal for encoding project-specific workflows, style guides, or domain-specific knowledge that you want the agent to follow consistently.
+
+## Skill discovery locations
+
+Claw Code uses two separate discovery mechanisms:
+
+**When the `Skill` tool loads a skill** (i.e., the agent calls a skill at runtime), it searches these locations in order. The first match wins:
+
+| Priority | Path | Scope |
+|----------|------|-------|
+| 1 | `$CODEX_HOME/skills/<name>/SKILL.md` | User (env override) |
+| 2 | `~/.agents/skills/<name>/SKILL.md` | User |
+| 3 | `~/.config/opencode/skills/<name>/SKILL.md` | User |
+| 4 | `~/.codex/skills/<name>/SKILL.md` | User |
+
+**When `/skills` lists available skills**, it also scans project-level directories in ancestor folders:
+
+| Path | Scope |
+|------|-------|
+| `.codex/skills/<name>/SKILL.md` | Project |
+| `.claw/skills/<name>/SKILL.md` | Project |
+| `.codex/commands/` (legacy) | Project |
+| `.claw/commands/` (legacy) | Project |
+
+<Tip>
+For skills you want available to the runtime `Skill` tool, place them in a user-level directory such as `~/.codex/skills/`. Project-level skill directories appear in `/skills` output but are not automatically searched by the `Skill` tool.
+</Tip>
+
+## SKILL.md format
+
+A skill file is a plain markdown document. Optionally, it can include YAML frontmatter between `---` markers with `name` and `description` fields. The `description` field is extracted and displayed when you list skills with `/skills`.
+
+```markdown
+---
+name: my-skill
+description: Brief description shown in /skills output
+---
+
+# My Skill
+
+Detailed instructions that the agent will follow when this skill is loaded.
+
+You can include:
+- Step-by-step workflows
+- Code conventions
+- Preferred tools and patterns
+- Domain-specific context
+```
+
+Only `name` and `description` are parsed from the frontmatter. All other content (including the frontmatter block itself) is passed verbatim to the agent as the skill prompt.
+
+## Creating a skill
+
+<Steps>
+  <Step title="Create the skill directory">
+    Create a directory named after your skill inside any of the discovery locations. For a project-level skill:
+
+    ```bash
+    mkdir -p .claw/skills/my-workflow
+    ```
+  </Step>
+  <Step title="Write the SKILL.md file">
+    Create a `SKILL.md` inside the directory:
+
+    ```bash
+    cat > .claw/skills/my-workflow/SKILL.md << 'EOF'
+    ---
+    name: my-workflow
+    description: Project coding conventions and review checklist
+    ---
+
+    # My Workflow
+
+    When working on this project:
+
+    1. Always run `cargo fmt` before committing.
+    2. Add a unit test for every public function.
+    3. Use `tracing::info!` for log output, never `println!`.
+    EOF
+    ```
+  </Step>
+  <Step title="Verify discovery">
+    In the Claw Code REPL, run `/skills` to confirm the skill is listed:
+
+    ```
+    /skills
+    ```
+  </Step>
+</Steps>
+
+## Using skills
+
+The agent loads skills automatically via the `Skill` tool. You can also prompt it explicitly:
+
+```
+Load the my-workflow skill and apply it to the current task.
+```
+
+The `Skill` tool accepts two fields:
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `skill` | Yes | Name of the skill to load (matches directory name, case-insensitive) |
+| `args` | No | Optional arguments forwarded to the skill |
+
+## The `/skills` slash command
+
+Run `/skills` in the REPL to list all discovered skills across all search paths:
+
+```
+/skills
+```
+
+The output shows each skill's name, description (from frontmatter), source location (user or project), and whether it is shadowed by a higher-priority skill of the same name.
+
+## Legacy support
+
+Claw Code also discovers skills from legacy `commands/` directories for backwards compatibility:
+
+- `.codex/commands/` (project-level)
+- `.claw/commands/` (project-level)
+- `$CODEX_HOME/commands/` (user-level)
+- `~/.codex/commands/` (user-level)
+- `~/.claw/commands/` (user-level)
+
+Inside a legacy `commands/` directory, skills can be either a subdirectory containing `SKILL.md` or a standalone `.md` file. These are labeled `legacy /commands` in `/skills` output.
+
+<Note>
+New skills should always use the `skills/<name>/SKILL.md` convention. The legacy `commands/` path is supported for migration only.
+</Note>

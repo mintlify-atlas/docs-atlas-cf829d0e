@@ -1,0 +1,121 @@
+---
+title: "Agent spawning"
+description: Delegate complex sub-tasks to specialized AI agents
+---
+
+Claw Code can spawn sub-agents to handle parallel or specialized tasks. When the primary agent calls the `Agent` tool, it launches a background thread that runs its own model conversation, writes task output to a markdown file, and records its lifecycle in a JSON manifest.
+
+Sub-agents run with a focused system prompt that instructs them to work only on the delegated task, use only the tools available to them, and finish with a concise result. They do not interact with the user directly.
+
+## The `Agent` tool
+
+The `Agent` tool is called by the AI when it decides to delegate a task. It accepts the following fields:
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `description` | Yes | Short description of what the agent should do |
+| `prompt` | Yes | Full instructions for the agent |
+| `subagent_type` | No | Specialization type (see table below) |
+| `name` | No | Human-readable name for the agent (slugified) |
+| `model` | No | Model override; defaults to `claude-opus-4-6` |
+
+### Subagent types
+
+The `subagent_type` controls which tools the sub-agent has access to:
+
+| Type | Available tools |
+|------|----------------|
+| `Explore` | `read_file`, `glob_search`, `grep_search`, `WebFetch`, `WebSearch`, `ToolSearch`, `Skill`, `StructuredOutput` |
+| `Plan` | `read_file`, `glob_search`, `grep_search`, `WebFetch`, `WebSearch`, `ToolSearch`, `Skill`, `TodoWrite`, `StructuredOutput`, `SendUserMessage` |
+| `Verification` | `bash`, `read_file`, `glob_search`, `grep_search`, `WebFetch`, `WebSearch`, `ToolSearch`, `TodoWrite`, `StructuredOutput`, `SendUserMessage`, `PowerShell` |
+| `claw-guide` | `read_file`, `glob_search`, `grep_search`, `WebFetch`, `WebSearch`, `ToolSearch`, `Skill`, `StructuredOutput`, `SendUserMessage` |
+| `statusline-setup` | `bash`, `read_file`, `write_file`, `edit_file`, `glob_search`, `grep_search`, `ToolSearch` |
+| _(default)_ | All tools except `Agent` itself |
+
+If `subagent_type` is omitted or set to `general` / `general-purpose`, the sub-agent gets the full general-purpose tool set.
+
+## Agent lifecycle
+
+<Steps>
+  <Step title="Task file written">
+    The agent creates a markdown file at `<agent-store>/<agent-id>.md` containing the task description, prompt, and metadata.
+  </Step>
+  <Step title="Manifest written">
+    A JSON manifest is written to `<agent-store>/<agent-id>.json` with status `"running"`, `agentId`, `name`, `model`, `outputFile`, `manifestFile`, and `createdAt` / `startedAt` timestamps.
+  </Step>
+  <Step title="Agent runs">
+    The sub-agent executes in a background thread, running up to `32` turns by default. It uses its own model conversation with the tools allowed for its type.
+  </Step>
+  <Step title="Manifest updated on completion">
+    When the agent finishes (or fails), the manifest is updated with status `"completed"` or `"failed"`, a `completedAt` timestamp, and the agent's final response is appended to the output markdown file.
+  </Step>
+</Steps>
+
+Agent output files are stored in a `.claw-agents/` directory (two levels above the current working directory by default). You can override this location with the `CLAW_AGENT_STORE` environment variable.
+
+## Default agent model
+
+The default model for all sub-agents is `claude-opus-4-6` (the `DEFAULT_AGENT_MODEL` constant in `rust/crates/tools/src/lib.rs:1501`). You can override it per-invocation by passing `model` to the `Agent` tool.
+
+## The `/agents` slash command
+
+Run `/agents` in the REPL to list all agent definitions discovered from `.claw/agents/` and `.codex/agents/` directories in the project and user home:
+
+```
+/agents
+```
+
+The output shows each agent's name, description, model, reasoning effort, source location, and whether it is shadowed by a higher-priority definition.
+
+## Agent definition files
+
+You can pre-define agents as TOML files in `.claw/agents/` (or `.codex/agents/`). These definitions appear in `/agents` output and can be referenced by name.
+
+A TOML agent definition supports the following fields:
+
+| Field | Description |
+|-------|-------------|
+| `name` | Agent name |
+| `description` | What this agent does |
+| `model` | Model to use |
+| `model_reasoning_effort` | Reasoning effort hint |
+
+### Example agent definition
+
+```toml
+name = "security-reviewer"
+description = "Performs a security audit of Rust code for common vulnerabilities"
+model = "claude-opus-4-6"
+model_reasoning_effort = "high"
+```
+
+## Creating a custom agent
+
+<Steps>
+  <Step title="Create the agents directory">
+    ```bash
+    mkdir -p .claw/agents
+    ```
+  </Step>
+  <Step title="Write the agent TOML file">
+    ```bash
+    cat > .claw/agents/security-reviewer.toml << 'EOF'
+    name = "security-reviewer"
+    description = "Performs a security audit of Rust code for common vulnerabilities"
+    model = "claude-opus-4-6"
+    model_reasoning_effort = "high"
+    EOF
+    ```
+  </Step>
+  <Step title="Verify discovery">
+    Run `/agents` in the REPL to confirm the agent appears:
+
+    ```
+    /agents
+    ```
+  </Step>
+</Steps>
+
+<Note>
+Agent definitions in `.claw/agents/` are metadata only — they do not directly configure the sub-agent's tools or system prompt at runtime. The `Agent` tool's `subagent_type` field controls the actual tool set and behavior.
+</Note>
